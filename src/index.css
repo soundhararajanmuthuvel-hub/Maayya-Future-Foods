@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Base CSS print media query for Maya Future Foods accounting documents */
+@media print {
+  /* Hide application shell elements: sidebar, topbar, demo banner, action buttons, and notifications */
+  aside,
+  header,
+  .app-sidebar,
+  .app-topbar,
+  .demo-banner,
+  .no-print,
+  button,
+  input,
+  select,
+  textarea,
+  [data-role="demo-banner"],
+  [data-role="sidebar"],
+  [data-role="topbar"] {
+    display: none !important;
+  }
+
+  /* Reset page geometry and margins */
+  @page {
+    margin: 12mm;
+    size: auto;
+  }
+
+  /* Force clean white background and high-contrast dark text */
+  html,
+  body,
+  #root,
+  .min-h-screen,
+  main,
+  div {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Force document text and headings to high-contrast pure black / deep navy */
+  h1, h2, h3, h4, h5, h6, strong, b, th, .font-bold, .font-semibold {
+    color: #000000 !important;
+  }
+
+  p, span, td, li {
+    color: #0f172a !important;
+  }
+
+  /* Modal print adjustments: unwrap fixed dialogs to render clean single-page documents */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .fixed.inset-0 > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* High contrast table borders and tabular layout for invoices, statements & reports */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #94a3b8 !important; /* High-contrast crisp border */
+    padding: 6px 8px !important;
+    background: #ffffff !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  thead th {
+    background-color: #f1f5f9 !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Ensure links don't output raw URLs or underline clutter on paper */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}
