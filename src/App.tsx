@@ -128,7 +128,6 @@ const MainLayout: React.FC = () => {
               >
                 About Software
               </button>
-              <span className="text-slate-400">v1.2.4</span>
             </div>
           </footer>
         </div>

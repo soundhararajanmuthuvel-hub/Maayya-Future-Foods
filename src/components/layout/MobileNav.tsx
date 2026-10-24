@@ -254,7 +254,6 @@ export const MobileNav: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
                   <span className="font-medium text-slate-200 text-xs">Developed by MSR Solutions</span>
                 </div>
-                <span className="text-[10px] text-sky-400 font-mono">v1.2.4</span>
               </button>
             </div>
           </div>

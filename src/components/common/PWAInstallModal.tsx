@@ -57,9 +57,6 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
               <h4 className="font-bold text-white text-sm truncate font-sans">
                 Maayya Future Foods
               </h4>
-              <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono text-[10px] font-semibold">
-                PWA v1.2.4
-              </span>
             </div>
             <p className="text-[11px] text-slate-300 mt-0.5 truncate">
               Smart Business Manager · Developed by MSR Solutions

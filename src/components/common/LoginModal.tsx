@@ -188,7 +188,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         {/* Software Footer: "Developed by MSR Solutions" */}
         <div className="bg-slate-100 px-6 py-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
           <span className="font-semibold text-slate-700">Developed by MSR Solutions</span>
-          <span className="font-mono text-[10px]">Build v1.2.4 • Client: {companyInfo.name}</span>
+          <span className="font-mono text-[10px]">Client: {companyInfo.name}</span>
         </div>
       </div>
     </div>

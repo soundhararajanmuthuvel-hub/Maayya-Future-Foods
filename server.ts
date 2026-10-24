@@ -17,7 +17,7 @@ const VAPID_PUBLIC_KEY =
   'BKp4aK0SDXmNQVfYHml9Wf8JtWzvAXw5VGqsKbW809egLXtn1cjhDEXhnso1fvUipWecrI6sYZ_-kxUe7hYiTaU';
 const VAPID_PRIVATE_KEY =
   process.env.VAPID_PRIVATE_KEY || 'WT7RTzas1NfuIuwriLAaFsZz9UDhxN-WGx_DndW9fZk';
-const VAPID_SUBJECT = 'mailto:support@msrsolutions.com';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@localhost';
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 

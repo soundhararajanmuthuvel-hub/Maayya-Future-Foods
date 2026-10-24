@@ -1263,75 +1263,59 @@ export const SettingsScreen: React.FC = () => {
       {activeTab === 'about' && (
         <div className="space-y-4 max-w-4xl text-xs">
           {/* Developer Branding Banner */}
-          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-xl p-6 text-white border border-slate-800 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-              <MsrLogo variant="hero" theme="dark" className="shrink-0" />
-              <div className="border-t md:border-t-0 md:border-l border-slate-800/80 pt-4 md:pt-0 md:pl-6 flex-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-medium mb-2">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Official Enterprise Release v1.2.4
-                </div>
-                <h2 className="text-lg font-bold text-white tracking-tight font-sans">
-                  Maayya Future Foods — Smart Business Manager
+          <div className="bg-slate-900 rounded-xl p-5 text-white border border-slate-800 shadow-sm relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-5 text-center md:text-left">
+              <div className="shrink-0 p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span className="font-bold text-sky-400 text-sm font-sans tracking-wide">MSR Solutions</span>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-5 flex-1">
+                <h2 className="text-base font-bold text-white tracking-tight font-sans">
+                  {companyInfo.name} — Smart Business Manager
                 </h2>
-                <p className="text-slate-300 text-xs mt-1.5 leading-relaxed">
-                  Enterprise-grade point-of-sale, cold-chain batch tracking, multi-brand wholesale distribution, and GST accounting software designed specifically for {companyInfo.name}.
+                <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+                  A business management application designed for billing, inventory, purchases, retail shop outstanding balances, expenses, and financial reports.
                 </p>
 
-                <div className="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-slate-900/60 p-2.5 rounded border border-slate-800">
+                <div className="mt-4 pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-slate-950/60 p-2.5 rounded border border-slate-800">
                     <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">
                       Software Developer
                     </span>
-                    <span className="font-bold text-sky-400 text-sm">
+                    <span className="font-bold text-sky-400 text-xs">
                       MSR Solutions
                     </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                      Architecture & Core Systems
-                    </span>
                   </div>
-                  <div className="bg-slate-900/60 p-2.5 rounded border border-slate-800 flex items-center gap-2.5">
-                    <img
-                      src="/assets/maayya-future-foods-logo.png"
-                      alt="Maayya Future Foods logo"
-                      className="h-10 w-auto max-w-[48px] object-contain shrink-0"
-                    />
-                    <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">
-                        Client Organization
-                      </span>
-                      <span className="font-bold text-slate-100 text-sm">
-                        {companyInfo.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        {companyInfo.city} · Cold-Chain Wholesale & POS
-                      </span>
-                    </div>
+                  <div className="bg-slate-950/60 p-2.5 rounded border border-slate-800">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">
+                      Client Company
+                    </span>
+                    <span className="font-bold text-slate-100 text-xs">
+                      {companyInfo.name}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Software Identity & Functional Division Matrix */}
+          {/* Software Identity & Deployment Matrix */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white border border-slate-200/90 rounded-lg p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 font-bold text-slate-900">
                 <Building2 className="w-4 h-4 text-sky-600" />
-                <span>Entity Separation & Branding Governance</span>
+                <span>Client & Software Roles</span>
               </div>
               <div className="space-y-2 text-slate-600 leading-relaxed">
                 <div className="p-2.5 bg-slate-50 rounded border border-slate-200">
                   <span className="font-semibold text-slate-900 block text-xs">Client Business: {companyInfo.name}</span>
                   <p className="text-[11px] text-slate-600 mt-0.5">
-                    Issues all legal tax invoices, wholesale delivery challans, receipt vouchers, and holds FSSAI / GST registrations. MSR Solutions does not replace client invoice headers.
+                    Issues commercial invoices, delivery challans, and holds legal registrations.
                   </p>
                 </div>
                 <div className="p-2.5 bg-slate-50 rounded border border-slate-200">
                   <span className="font-semibold text-sky-800 block text-xs">Software Developer: MSR Solutions</span>
                   <p className="text-[11px] text-slate-600 mt-0.5">
-                    Engineered the smart business management platform, cold-chain algorithms, offline database engine, and desktop packager architecture.
+                    Engineered and maintains the smart business manager software.
                   </p>
                 </div>
               </div>
@@ -1340,7 +1324,7 @@ export const SettingsScreen: React.FC = () => {
             <div className="bg-white border border-slate-200/90 rounded-lg p-4 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 font-bold text-slate-900">
                 <Cpu className="w-4 h-4 text-indigo-600" />
-                <span>System Architecture & Runtime</span>
+                <span>Verified Deployment Architecture</span>
               </div>
               <div className="space-y-2 text-slate-600">
                 <div className="flex justify-between py-1 border-b border-slate-100">
@@ -1352,42 +1336,19 @@ export const SettingsScreen: React.FC = () => {
                   <span className="font-semibold text-sky-700">MSR Solutions</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">License Holder:</span>
-                  <span className="font-medium text-slate-900">{companyInfo.name}</span>
+                  <span className="text-slate-500">Frontend Hosting:</span>
+                  <span className="font-medium text-slate-900">Vercel</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Build Number:</span>
-                  <span className="font-mono text-slate-900">2026.10-MSR-REV4</span>
+                  <span className="text-slate-500">Backend Hosting:</span>
+                  <span className="font-medium text-slate-900">Render</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Security Standard:</span>
-                  <span className="text-slate-900">Local Zero-Knowledge Ledger</span>
+                  <span className="text-slate-500">Database:</span>
+                  <span className="font-medium text-slate-900">Render PostgreSQL</span>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Developer Contact & Software Footer Box */}
-          <div className="bg-white border border-slate-200/90 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MsrLogo variant="compact" />
-              <div className="text-[11px] text-slate-600">
-                <span className="font-semibold text-slate-800 block">Developed by MSR Solutions</span>
-                <span>Enterprise Support: support@msrsolutions.com • www.msrsolutions.com</span>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                addToast({
-                  type: 'info',
-                  title: 'MSR Solutions Diagnostics',
-                  message: 'System integrity 100%. Offline database ready for desktop compilation.',
-                });
-              }}
-              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors whitespace-nowrap"
-            >
-              Run System Diagnostics
-            </button>
           </div>
         </div>
       )}
