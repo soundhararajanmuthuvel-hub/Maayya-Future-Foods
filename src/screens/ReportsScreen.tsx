@@ -432,7 +432,7 @@ export const ReportsScreen: React.FC = () => {
                 <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-[11px]">
                   <th className="p-2">Item Description</th>
                   <th className="p-2">Brand</th>
-                  <th className="p-2">Primary Chamber</th>
+                  <th className="p-2">Category</th>
                   <th className="p-2 text-right">Current Stock</th>
                   <th className="p-2 text-right">Inward Cost Rate</th>
                   <th className="p-2 text-right">Total Cost Valuation</th>
@@ -444,7 +444,7 @@ export const ReportsScreen: React.FC = () => {
                   <tr key={p.id}>
                     <td className="p-2 font-medium font-sans text-slate-900">{p.name}</td>
                     <td className="p-2 text-slate-500 font-sans">{p.brand}</td>
-                    <td className="p-2 text-[11px] text-slate-600">{p.primaryZone}</td>
+                    <td className="p-2 text-[11px] text-slate-600 font-sans">{p.category}</td>
                     <td className="p-2 text-right font-bold">{p.currentStock} {p.unit}</td>
                     <td className="p-2 text-right text-slate-600">{formatINR(p.purchaseRate)}</td>
                     <td className="p-2 text-right font-bold text-slate-900">{formatINR(p.currentStock * p.purchaseRate)}</td>

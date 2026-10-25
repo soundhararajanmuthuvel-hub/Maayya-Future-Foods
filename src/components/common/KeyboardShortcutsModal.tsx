@@ -17,7 +17,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
     { label: 'Direct POS Billing', screen: 'billing-direct' as const, key: 'POS Counter' },
     { label: 'Retail Shop Billing', screen: 'billing-retail' as const, key: 'Wholesale Invoice' },
     { label: 'New Purchase Entry', screen: 'purchases' as const, key: 'GRN Inward' },
-    { label: 'Inventory & Cold-Chain', screen: 'inventory' as const, key: 'Stock Freezers' },
+    { label: 'Inventory & Stock Management', screen: 'inventory' as const, key: 'Stock Inventory' },
     { label: 'Retail Receivables', screen: 'shops' as const, key: 'Receive Payment' },
     { label: 'Daily Cash Closing', screen: 'expenses' as const, key: 'Reconciliation' },
   ];

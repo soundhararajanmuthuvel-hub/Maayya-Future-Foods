@@ -56,7 +56,7 @@ export const MobileNav: React.FC = () => {
     { id: 'invoices', label: 'Sales Invoices', icon: <FileText className="w-4 h-4" />, category: 'Sales & Billing' },
     { id: 'products', label: 'Products Catalog', icon: <Package className="w-4 h-4" />, category: 'Inventory', badge: lowStockCount, badgeVariant: 'warning' },
     { id: 'brands', label: 'Brands Directory', icon: <Tag className="w-4 h-4" />, category: 'Inventory' },
-    { id: 'inventory', label: 'Stock & Freezers', icon: <Warehouse className="w-4 h-4" />, category: 'Inventory' },
+    { id: 'inventory', label: 'Inventory & Stock', icon: <Warehouse className="w-4 h-4" />, category: 'Inventory' },
     { id: 'purchases', label: 'Purchases & Inward', icon: <Truck className="w-4 h-4" />, category: 'Purchases', badge: draftPurchasesCount, badgeVariant: 'info' },
     { id: 'suppliers', label: 'Suppliers Directory', icon: <Building2 className="w-4 h-4" />, category: 'Purchases' },
     { id: 'shops', label: 'Retail Shops', icon: <Store className="w-4 h-4" />, category: 'Receivables & Accounts', badge: overdueShopsCount, badgeVariant: 'danger' },
@@ -112,7 +112,7 @@ export const MobileNav: React.FC = () => {
             }`}
           >
             <Warehouse className="w-4 h-4" />
-            <span className="text-[10px] truncate">Freezers</span>
+            <span className="text-[10px] truncate">Stock</span>
             {lowStockCount > 0 && (
               <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-amber-400" />
             )}

@@ -1,3 +1,16 @@
+/**
+ * Returns the backend API base URL for Render deployment or local development.
+ * Vercel frontend connects to Render backend via VITE_BACKEND_URL or VITE_API_BASE_URL.
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') return '';
+  const envUrl =
+    (import.meta as any).env?.VITE_BACKEND_URL ||
+    (import.meta as any).env?.VITE_API_BASE_URL ||
+    '';
+  return envUrl ? envUrl.replace(/\/+$/, '') : '';
+}
+
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -50,6 +63,59 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return await Notification.requestPermission();
 }
 
+export interface BackendVapidStatus {
+  configured: boolean;
+  reachable: boolean;
+  activeSubscriptions?: number;
+  message?: string;
+}
+
+/**
+ * Checks if the Render backend VAPID push engine is active and reachable
+ */
+export async function fetchBackendVapidStatus(): Promise<BackendVapidStatus> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/push/status`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      return {
+        configured: false,
+        reachable: false,
+        message: `Backend returned HTTP status ${res.status}`,
+      };
+    }
+    const data = await res.json();
+    return {
+      configured: Boolean(data.vapidConfigured),
+      reachable: true,
+      activeSubscriptions: data.activeSubscriptions || 0,
+    };
+  } catch (err: any) {
+    return {
+      configured: false,
+      reachable: false,
+      message: err?.message || 'Unable to reach backend VAPID engine.',
+    };
+  }
+}
+
+/**
+ * Checks if the current browser already has an active push subscription
+ */
+export async function getExistingPushSubscription(): Promise<PushSubscription | null> {
+  try {
+    if (!('serviceWorker' in navigator)) return null;
+    const registration = await navigator.serviceWorker.ready;
+    return await registration.pushManager.getSubscription();
+  } catch (err) {
+    console.warn('Error reading existing push subscription:', err);
+    return null;
+  }
+}
+
 export async function subscribeToPushNotifications(): Promise<{ success: boolean; message: string }> {
   try {
     const supported = await isPushNotificationSupported();
@@ -64,19 +130,42 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
     if (permission !== 'granted') {
       return {
         success: false,
-        message: 'Notification permission was denied or dismissed.',
+        message: 'Notification permission was denied or dismissed by user.',
       };
     }
 
     // Wait for service worker registration
     const registration = await navigator.serviceWorker.ready;
 
-    // Fetch VAPID public key from backend
-    const keyResponse = await fetch('/api/push/vapid-public-key');
-    if (!keyResponse.ok) {
-      throw new Error('Failed to retrieve VAPID public key from backend.');
+    // Fetch VAPID public key from backend (using baseUrl for Render backend)
+    const baseUrl = getApiBaseUrl();
+    const keyUrl = `${baseUrl}/api/push/vapid-public-key`;
+    
+    let keyResponse: Response;
+    try {
+      keyResponse = await fetch(keyUrl, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+    } catch (networkError: any) {
+      throw new Error(
+        `Failed to connect to backend server at ${keyUrl}. Please verify Render backend is running and CORS is configured.`
+      );
     }
+
+    if (!keyResponse.ok) {
+      let errorMsg = 'Failed to retrieve VAPID public key from backend.';
+      try {
+        const errJson = await keyResponse.json();
+        if (errJson.error) errorMsg = errJson.error;
+      } catch (_) {}
+      throw new Error(errorMsg);
+    }
+
     const { publicKey } = await keyResponse.json();
+    if (!publicKey) {
+      throw new Error('Backend returned an empty VAPID public key.');
+    }
 
     const applicationServerKey = urlBase64ToUint8Array(publicKey);
 
@@ -90,22 +179,22 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
     }
 
     // Post to backend
-    const subscribeResponse = await fetch('/api/push/subscribe', {
+    const subscribeResponse = await fetch(`${baseUrl}/api/push/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscription: subscription.toJSON(),
-        deviceInfo: `${navigator.platform} (${navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'})`,
+        deviceInfo: `${navigator.platform || 'Device'} (${navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'})`,
       }),
     });
 
     if (!subscribeResponse.ok) {
-      throw new Error('Failed to register subscription with server.');
+      throw new Error('Failed to register subscription with backend server.');
     }
 
     return {
       success: true,
-      message: 'Subscribed to push notifications successfully!',
+      message: 'Browser push notifications successfully registered with backend!',
     };
   } catch (error: any) {
     console.error('Push subscription error:', error);
@@ -116,9 +205,15 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
   }
 }
 
-export async function sendTestPushNotification(title?: string, body?: string): Promise<{ success: boolean; message: string }> {
+export async function sendTestPushNotification(
+  title?: string,
+  body?: string,
+  category?: keyof NotificationPreferences,
+  preferences?: NotificationPreferences
+): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch('/api/push/send-test', {
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/push/send-test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -126,8 +221,17 @@ export async function sendTestPushNotification(title?: string, body?: string): P
         body: body || 'Real Web Push test delivered to your registered mobile/desktop device.',
         url: '/',
         tag: 'maayya-test-alert',
+        category,
+        preferences,
       }),
     });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `Backend dispatch failed with HTTP status ${response.status}`,
+      };
+    }
 
     const data = await response.json();
     return {
@@ -138,7 +242,7 @@ export async function sendTestPushNotification(title?: string, body?: string): P
     console.error('Test push error:', error);
     return {
       success: false,
-      message: error?.message || 'Failed to dispatch test push notification.',
+      message: error?.message || 'Failed to dispatch test push notification. Check backend connectivity.',
     };
   }
 }

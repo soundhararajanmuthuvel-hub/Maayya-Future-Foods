@@ -87,7 +87,7 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'inventory',
-      label: 'Stock & Freezers',
+      label: 'Inventory & Stock',
       icon: <Warehouse className="w-4 h-4" />,
       category: 'Inventory',
     },

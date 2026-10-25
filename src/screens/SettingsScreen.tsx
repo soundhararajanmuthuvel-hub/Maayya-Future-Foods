@@ -43,6 +43,9 @@ import {
   subscribeToPushNotifications,
   sendTestPushNotification,
   getNotificationPermission,
+  fetchBackendVapidStatus,
+  getExistingPushSubscription,
+  BackendVapidStatus,
 } from '../services/notificationService';
 
 export const SettingsScreen: React.FC = () => {
@@ -72,6 +75,26 @@ export const SettingsScreen: React.FC = () => {
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermission());
   const [subscribing, setSubscribing] = useState(false);
   const [testingPush, setTestingPush] = useState(false);
+  const [vapidStatus, setVapidStatus] = useState<BackendVapidStatus | null>(null);
+  const [checkingVapid, setCheckingVapid] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
+
+  const checkPushInfrastructure = async () => {
+    setCheckingVapid(true);
+    try {
+      const status = await fetchBackendVapidStatus();
+      setVapidStatus(status);
+      const sub = await getExistingPushSubscription();
+      setHasSubscription(Boolean(sub));
+      setPushPermission(getNotificationPermission());
+    } finally {
+      setCheckingVapid(false);
+    }
+  };
+
+  useEffect(() => {
+    checkPushInfrastructure();
+  }, []);
 
   const [activeTab, setActiveTab] = useState<
     'pwa' | 'brands' | 'company' | 'gst' | 'coldchain' | 'backup' | 'audit' | 'checklist' | 'about'
@@ -237,6 +260,10 @@ export const SettingsScreen: React.FC = () => {
     try {
       const res = await subscribeToPushNotifications();
       setPushPermission(getNotificationPermission());
+      const sub = await getExistingPushSubscription();
+      setHasSubscription(Boolean(sub));
+      await checkPushInfrastructure();
+
       if (res.success) {
         updateNotificationPreferences({ pushNotificationsEnabled: true });
         addToast({
@@ -267,7 +294,9 @@ export const SettingsScreen: React.FC = () => {
     try {
       const res = await sendTestPushNotification(
         'Maayya Future Foods Alert',
-        'Real-time push test dispatched from MSR Solutions backend.'
+        'Real-time push test dispatched from MSR Solutions backend.',
+        undefined,
+        notificationPreferences
       );
       if (res.success) {
         addToast({
@@ -473,34 +502,91 @@ export const SettingsScreen: React.FC = () => {
             </div>
 
             {/* Status indicators */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Browser Permission
+                  1. Browser Permission
                 </span>
-                <span className="font-mono font-bold text-xs text-slate-900 block mt-1">
+                <span
+                  className={`font-mono font-bold text-xs block mt-1 ${
+                    pushPermission === 'granted'
+                      ? 'text-emerald-700'
+                      : pushPermission === 'denied'
+                      ? 'text-rose-700'
+                      : 'text-amber-700'
+                  }`}
+                >
                   {pushPermission.toUpperCase()}
                 </span>
                 <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  {pushPermission === 'granted' ? 'Allowed to receive system push' : 'Permission prompt required'}
+                  {pushPermission === 'granted'
+                    ? 'Browser permitted to show alerts'
+                    : pushPermission === 'denied'
+                    ? 'Denied in browser permissions'
+                    : 'Prompt will appear upon click'}
                 </span>
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Backend VAPID Engine
+                  2. Push Subscription
                 </span>
-                <span className="font-mono font-bold text-xs text-emerald-700 block mt-1">
-                  SECURE & CONFIGURED
+                <span
+                  className={`font-mono font-bold text-xs block mt-1 ${
+                    hasSubscription ? 'text-emerald-700' : 'text-slate-600'
+                  }`}
+                >
+                  {hasSubscription ? 'ACTIVE ON DEVICE' : 'NOT SUBSCRIBED'}
                 </span>
                 <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Private keys held on server; never exposed to UI
+                  {hasSubscription
+                    ? 'Registered with Service Worker'
+                    : 'Click "Enable Browser Push" above'}
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    3. Backend Engine
+                  </span>
+                  <button
+                    onClick={checkPushInfrastructure}
+                    disabled={checkingVapid}
+                    title="Re-check backend VAPID status"
+                    className="text-[10px] text-sky-600 hover:text-sky-800 underline font-medium flex items-center gap-0.5"
+                  >
+                    <RotateCcw className={`w-2.5 h-2.5 ${checkingVapid ? 'animate-spin' : ''}`} />
+                    <span>Check</span>
+                  </button>
+                </div>
+                <span
+                  className={`font-mono font-bold text-xs block mt-1 ${
+                    vapidStatus?.configured && vapidStatus?.reachable
+                      ? 'text-emerald-700'
+                      : vapidStatus && !vapidStatus.reachable
+                      ? 'text-rose-600'
+                      : 'text-amber-600'
+                  }`}
+                >
+                  {checkingVapid
+                    ? 'CHECKING...'
+                    : vapidStatus?.configured && vapidStatus?.reachable
+                    ? 'SECURE & ONLINE'
+                    : vapidStatus && !vapidStatus.reachable
+                    ? 'BACKEND UNREACHABLE'
+                    : 'UNCONFIGURED'}
+                </span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  {vapidStatus?.reachable
+                    ? `${vapidStatus.activeSubscriptions ?? 0} active subscriptions`
+                    : 'VAPID keys held securely on Render'}
                 </span>
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Notification Center
+                  4. Notification Center
                 </span>
                 <span className="font-mono font-bold text-xs text-slate-900 block mt-1">
                   {unreadNotificationsCount} UNREAD ALERTS
@@ -1358,9 +1444,9 @@ export const SettingsScreen: React.FC = () => {
                 details: 'Full sales history; invoice cancellation requires mandatory reason, generates reversal voucher and returns items to cold storage.',
               },
               {
-                module: '7. Cold Storage Inventory & Physical Count',
+                module: '7. Inventory & Physical Count Reconciliation',
                 status: 'Complete & Wired',
-                details: 'Freezer A (-18°C), Freezer B (-22°C), Chiller C (+4°C), inter-freezer stock transfer, wastage adjustment (melt/damage), physical count sheet.',
+                details: 'FEFO batch tracking, expiry date monitoring, wastage and damage adjustments, physical stock audit count sheet.',
               },
               {
                 module: '8. Operational Expenses & Daily Cash Closing',

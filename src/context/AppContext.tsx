@@ -578,7 +578,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             expiryDate: item.expiryDate,
             quantity: item.qty,
             costRate: item.costRate,
-            location: item.zone,
             daysToExpiry: 180,
           });
         }
@@ -768,7 +767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit(
       'Stock Transferred',
       'Inventory',
-      `Moved ${transferData.qty} units of ${transferData.productName} from ${transferData.fromZone} to ${transferData.toZone}`
+      `Moved ${transferData.qty} units of ${transferData.productName}`
     );
 
     addToast({

@@ -62,7 +62,7 @@ export const TopBar: React.FC = () => {
     'billing-retail': 'Retail Shop Wholesale Billing',
     invoices: 'Sales Invoices & Reversals Registry',
     products: 'Products & Multi-Brand Master Catalog',
-    inventory: 'Cold Storage Inventory & Freezer Management',
+    inventory: 'Inventory & Batch Stock Management',
     purchases: 'Inward Purchases & Goods Receipt Notes (GRN)',
     suppliers: 'Suppliers Directory & Ledger Payables',
     shops: 'Retail Shops Directory & Receivables',

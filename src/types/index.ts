@@ -47,18 +47,13 @@ export type ProductCategory =
   | 'Fresh Milk & Pouches' 
   | 'Paneer, Butter & Curd';
 
-export type ColdStorageZone = 
-  | 'Freezer A (-18°C Deep Freeze)' 
-  | 'Freezer B (-22°C Hardening Room)' 
-  | 'Chiller C (+4°C Dairy Room)';
-
 export interface Batch {
   batchNumber: string;
   mfgDate: string;
   expiryDate: string;
   quantity: number;
   costRate: number;
-  location: ColdStorageZone;
+  location?: string;
   daysToExpiry: number;
   isExpired?: boolean;
   isNearExpiry?: boolean; // <= 15 days
@@ -80,7 +75,6 @@ export interface Product {
   currentStock: number;
   minStockAlert: number;
   reorderLevel: number;
-  primaryZone: ColdStorageZone;
   batches: Batch[];
   isActive: boolean;
 }
@@ -181,7 +175,7 @@ export interface PurchaseItem {
   gstRate: number;
   taxAmount: number;
   totalAmount: number;
-  zone: ColdStorageZone;
+  zone?: string;
 }
 
 export interface PurchaseBill {
@@ -210,13 +204,12 @@ export interface StockAdjustment {
   productName: string;
   brand: BrandName;
   batchNumber: string;
-  type: 'Damage / Spoilage' | 'Cold-Chain Melt' | 'Punctured Pack' | 'Physical Audit Discrepancy' | 'Sampling / Promo';
+  type: 'Damage / Spoilage' | 'Damaged / Soft Pack' | 'Punctured Pack' | 'Physical Audit Discrepancy' | 'Sampling / Promo';
   action: 'Deduct' | 'Add';
   qty: number;
   unit: string;
   unitCost: number;
   totalLoss: number;
-  freezerZone: ColdStorageZone;
   remarks: string;
   recordedBy: string;
 }
@@ -228,8 +221,8 @@ export interface StockTransfer {
   productName: string;
   batchNumber: string;
   qty: number;
-  fromZone: ColdStorageZone;
-  toZone: ColdStorageZone;
+  fromZone?: string;
+  toZone?: string;
   transferredBy: string;
   notes: string;
 }
@@ -241,7 +234,7 @@ export interface ExpenseItem {
   category: 
     | 'Cold Storage Electricity' 
     | 'Diesel Generator Fuel' 
-    | 'Freezer & Compressor Maintenance' 
+    | 'Warehouse & Equipment Maintenance' 
     | 'Dry Ice & Gel Packs' 
     | 'Delivery Vehicle Diesel' 
     | 'Staff Salaries & Overtime' 

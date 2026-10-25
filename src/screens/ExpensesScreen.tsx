@@ -390,7 +390,7 @@ export const ExpensesScreen: React.FC = () => {
             >
               <option value="Cold Storage Electricity">Cold Storage Electricity (HT Bill)</option>
               <option value="Diesel Generator Fuel">Diesel Generator Fuel (35kVA DG)</option>
-              <option value="Freezer & Compressor Maintenance">Freezer & Compressor Maintenance</option>
+              <option value="Warehouse & Equipment Maintenance">Warehouse & Equipment Maintenance</option>
               <option value="Dry Ice & Gel Packs">Dry Ice & Gel Packs (Transit Cold)</option>
               <option value="Delivery Vehicle Diesel">Delivery Vehicle Diesel</option>
               <option value="Packaging & Insulated Thermocol">Packaging & Insulated Thermocol</option>

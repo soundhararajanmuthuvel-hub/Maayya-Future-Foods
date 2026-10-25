@@ -254,7 +254,7 @@ export const InvoicesScreen: React.FC = () => {
               <textarea
                 required
                 rows={3}
-                placeholder="e.g. Van freezer temperature spike during transit; retailer rejected consignment; delivery slip duplicated..."
+                placeholder="e.g. Retailer rejected consignment; delivery slip duplicated; billing error..."
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-slate-900"

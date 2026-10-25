@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Product, BrandName, ProductCategory, ColdStorageZone } from '../types';
+import { Product, BrandName, ProductCategory } from '../types';
 import { formatINR, getStockStatus } from '../utils/formatters';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -30,7 +30,6 @@ export const ProductsScreen: React.FC = () => {
     gstRate: 18 as 5 | 12 | 18,
     minStockAlert: 20,
     reorderLevel: 40,
-    primaryZone: 'Freezer A (-18°C Deep Freeze)' as ColdStorageZone,
     initialQty: 100,
     initialBatchNo: 'BT-2026-N01',
     initialExpDate: '2027-04-15',
@@ -70,7 +69,6 @@ export const ProductsScreen: React.FC = () => {
       gstRate: 18,
       minStockAlert: 25,
       reorderLevel: 40,
-      primaryZone: 'Freezer A (-18°C Deep Freeze)',
       initialQty: 50,
       initialBatchNo: `BT-${Date.now().toString().slice(-4)}`,
       initialExpDate: '2027-05-01',
@@ -95,7 +93,6 @@ export const ProductsScreen: React.FC = () => {
       gstRate: p.gstRate,
       minStockAlert: p.minStockAlert,
       reorderLevel: p.reorderLevel,
-      primaryZone: p.primaryZone,
       initialQty: p.currentStock,
       initialBatchNo: p.batches[0]?.batchNumber || 'BT-001',
       initialExpDate: p.batches[0]?.expiryDate || '2027-04-01',
@@ -123,7 +120,6 @@ export const ProductsScreen: React.FC = () => {
         gstRate: formData.gstRate,
         minStockAlert: Number(formData.minStockAlert),
         reorderLevel: Number(formData.reorderLevel),
-        primaryZone: formData.primaryZone,
       });
     } else {
       addProduct({
@@ -141,16 +137,14 @@ export const ProductsScreen: React.FC = () => {
         currentStock: Number(formData.initialQty),
         minStockAlert: Number(formData.minStockAlert),
         reorderLevel: Number(formData.reorderLevel),
-        primaryZone: formData.primaryZone,
         isActive: true,
         batches: [
           {
             batchNumber: formData.initialBatchNo,
-            mfgDate: '2026-10-23',
+            mfgDate: new Date().toISOString().split('T')[0],
             expiryDate: formData.initialExpDate,
             quantity: Number(formData.initialQty),
             costRate: Number(formData.purchaseRate),
-            location: formData.primaryZone,
             daysToExpiry: 180,
           },
         ],
@@ -184,15 +178,6 @@ export const ProductsScreen: React.FC = () => {
       sortable: true,
       accessor: 'category',
       render: (p) => <span className="text-slate-600">{p.category}</span>,
-    },
-    {
-      header: 'Zone',
-      render: (p) => (
-        <span className="font-mono text-[11px] text-slate-600">
-          {p.primaryZone.includes('Freezer A') ? 'Freezer A (-18°C)' :
-           p.primaryZone.includes('Freezer B') ? 'Freezer B (-22°C)' : 'Chiller C (+4°C)'}
-        </span>
-      ),
     },
     {
       header: 'MRP',
@@ -432,12 +417,12 @@ export const ProductsScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Cold Chain Location & Inventory Batches (FEFO Tracker) */}
+            {/* Inventory Batches (FEFO Tracker) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Warehouse className="w-4 h-4 text-sky-600" />
-                  <span>Batches & Cold Storage Allocation ({selectedProduct.primaryZone})</span>
+                  <span>Batches & Stock Inward Tracker</span>
                 </h4>
                 <span className="text-[10px] font-mono text-slate-500">FEFO Enforced</span>
               </div>
@@ -643,16 +628,13 @@ export const ProductsScreen: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Cold Storage Zone</label>
-              <select
-                value={formData.primaryZone}
-                onChange={(e) => setFormData({ ...formData, primaryZone: e.target.value as ColdStorageZone })}
-                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white"
-              >
-                <option value="Freezer A (-18°C Deep Freeze)">Freezer A (-18°C Deep Freeze)</option>
-                <option value="Freezer B (-22°C Hardening Room)">Freezer B (-22°C Hardening Room)</option>
-                <option value="Chiller C (+4°C Dairy Room)">Chiller C (+4°C Dairy Room)</option>
-              </select>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Min Stock Alert Level</label>
+              <input
+                type="number"
+                value={formData.minStockAlert}
+                onChange={(e) => setFormData({ ...formData, minStockAlert: Number(e.target.value) })}
+                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded font-mono"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Reorder Level Alert</label>

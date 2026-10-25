@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { PurchaseBill, PurchaseItem, ColdStorageZone } from '../types';
+import { PurchaseBill, PurchaseItem } from '../types';
 import { formatINR, formatDate } from '../utils/formatters';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -37,7 +37,7 @@ export const PurchasesScreen: React.FC = () => {
   const [billDate, setBillDate] = useState('2026-10-23');
   const [receivedDate, setReceivedDate] = useState('2026-10-23');
   const [paidAmount, setPaidAmount] = useState(0);
-  const [remarks, setRemarks] = useState('Refrigerated reefer truck receipt. Temperatures verified.');
+  const [remarks, setRemarks] = useState('Refrigerated goods receipt. Quality verified.');
 
   const [lineItems, setLineItems] = useState<PurchaseItem[]>([]);
 
@@ -71,7 +71,6 @@ export const PurchasesScreen: React.FC = () => {
       gstRate,
       taxAmount: tax,
       totalAmount: qty * costRate + tax,
-      zone: prod.primaryZone,
     };
     setLineItems(updated);
   };
@@ -128,7 +127,6 @@ export const PurchasesScreen: React.FC = () => {
         gstRate: defaultProd.gstRate,
         taxAmount: tax,
         totalAmount: 50 * defaultProd.purchaseRate + tax,
-        zone: defaultProd.primaryZone,
       },
     ]);
   };
@@ -424,14 +422,13 @@ export const PurchasesScreen: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse min-w-[680px]">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-[11px]">
-                    <th className="p-2 w-52">Product Description</th>
-                    <th className="p-2 w-28">Batch #</th>
-                    <th className="p-2 w-28">Expiry Date</th>
-                    <th className="p-2 w-20 text-right">Qty</th>
-                    <th className="p-2 w-24 text-right">Rate (₹)</th>
-                    <th className="p-2 w-16 text-center">GST %</th>
-                    <th className="p-2 w-28 text-right">Total (₹)</th>
-                    <th className="p-2 w-44">Target Freezer Zone</th>
+                    <th className="p-2 w-56">Product Description</th>
+                    <th className="p-2 w-32">Batch #</th>
+                    <th className="p-2 w-32">Expiry Date</th>
+                    <th className="p-2 w-24 text-right">Qty</th>
+                    <th className="p-2 w-28 text-right">Rate (₹)</th>
+                    <th className="p-2 w-20 text-center">GST %</th>
+                    <th className="p-2 w-32 text-right">Total (₹)</th>
                     <th className="p-2 w-8 text-center"></th>
                   </tr>
                 </thead>
@@ -496,21 +493,6 @@ export const PurchasesScreen: React.FC = () => {
                       <td className="p-1.5 text-center font-mono">{item.gstRate}%</td>
                       <td className="p-1.5 text-right font-mono font-bold text-slate-900">
                         {formatINR(item.totalAmount, true)}
-                      </td>
-                      <td className="p-1.5">
-                        <select
-                          value={item.zone}
-                          onChange={(e) => {
-                            const updated = [...lineItems];
-                            updated[idx].zone = e.target.value as ColdStorageZone;
-                            setLineItems(updated);
-                          }}
-                          className="w-full px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white font-mono"
-                        >
-                          <option value="Freezer A (-18°C Deep Freeze)">Freezer A (-18°C)</option>
-                          <option value="Freezer B (-22°C Hardening Room)">Freezer B (-22°C)</option>
-                          <option value="Chiller C (+4°C Dairy Room)">Chiller C (+4°C)</option>
-                        </select>
                       </td>
                       <td className="p-1.5 text-center">
                         <button
@@ -695,7 +677,6 @@ export const PurchasesScreen: React.FC = () => {
                   <th className="p-2 text-right">Qty</th>
                   <th className="p-2 text-right">Rate</th>
                   <th className="p-2 text-right">Total</th>
-                  <th className="p-2">Storage Zone</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -709,7 +690,6 @@ export const PurchasesScreen: React.FC = () => {
                     <td className="p-2 text-right font-mono font-bold text-slate-900">
                       {formatINR(item.totalAmount, true)}
                     </td>
-                    <td className="p-2 font-mono text-[11px] text-slate-600">{item.zone}</td>
                   </tr>
                 ))}
               </tbody>
