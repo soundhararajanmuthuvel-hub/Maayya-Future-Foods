@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, KeyRound, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
-import { verifySecurityPinWithBackend } from '../services/authService';
+import { verifySecurityPinWithBackend } from '../../services/authService';
 
 interface PinLockScreenProps {
   onUnlock: () => void;
