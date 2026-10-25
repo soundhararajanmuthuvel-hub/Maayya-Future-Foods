@@ -8,7 +8,8 @@ export interface VerifyPinResult {
   owner?: string;
   role?: string;
   terminalDesk?: string;
-  source?: 'render_backend' | 'offline_terminal';
+  source?: 'render_backend' | 'vercel_api' | 'offline_terminal';
+  isFatal?: boolean;
 }
 
 /**
@@ -33,14 +34,14 @@ export function extractSafeErrorMessage(err: unknown, fallback = 'Verification e
 }
 
 /**
- * Validates Security PIN via Render backend `/api/auth/verify-pin`.
+ * Validates Security PIN via:
+ * 1. Configured Render backend (`VITE_BACKEND_URL/api/auth/verify-pin` if set)
+ * 2. Vercel Serverless API (`/api/auth/verify-pin`)
  *
- * Guarantees:
- * 1. Checks content-type and HTTP status before JSON parsing (avoids HTML 404 crash).
- * 2. Safely sanitizes all error/message values to primitive strings to prevent React Error #31.
- * 3. Never exposes raw error objects.
- * 4. Gracefully falls back to client validation if backend is unreachable or returning 404 (due to missing Vercel env).
- * 5. PIN is never hardcoded in plaintext outside the fallback logic.
+ * Robust Error Handling:
+ * - Handles 405 (Method Not Allowed), 404 (Not Found), 500, network outage, and non-JSON responses.
+ * - Safely extracts JSON without crashing on HTML response bodies.
+ * - Enforces correct PIN check (1911) with no hardcoded frontend success bypass.
  */
 export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyPinResult> {
   const trimmedPin = typeof pin === 'string' ? pin.trim() : '';
@@ -52,112 +53,134 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
     };
   }
 
-  const baseUrl = getApiBaseUrl();
-  const endpoint = baseUrl ? `${baseUrl}/api/auth/verify-pin` : '/api/auth/verify-pin';
+  // Determine target API endpoints to attempt:
+  // First, if VITE_BACKEND_URL or VITE_API_BASE_URL is specified, try the Render backend.
+  // Next, try the local/relative `/api/auth/verify-pin` endpoint (serviced by server.ts or Vercel Serverless Function).
+  const configuredBaseUrl = getApiBaseUrl();
+  const candidateEndpoints: string[] = [];
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout for Render cold start
+  if (configuredBaseUrl) {
+    candidateEndpoints.push(`${configuredBaseUrl}/api/auth/verify-pin`);
+  }
+  candidateEndpoints.push('/api/auth/verify-pin');
 
-    let response: Response;
+  // De-duplicate endpoints
+  const endpointsToTry = Array.from(new Set(candidateEndpoints));
+
+  let lastError = '';
+  let isRateLimited = false;
+  let remainingBlockedSecs: number | undefined;
+
+  for (const endpoint of endpointsToTry) {
     try {
-      response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ pin: trimmedPin }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
 
-    const contentType = response.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ pin: trimmedPin }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
-    // Handle 404 Not Found explicitly (e.g. Vercel domain hit or backend route mismatch)
-    if (response.status === 404) {
-      console.warn(
-        `Backend PIN endpoint returned 404 at ${endpoint}. Please verify VITE_BACKEND_URL in Vercel project environment variables.`
-      );
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
 
-      // Perform secure fallback verification if backend URL is not yet bound on Vercel
-      if (trimmedPin === '1911') {
+      let data: any = null;
+      if (isJson) {
+        try {
+          data = await response.json();
+        } catch (_) {
+          // Handled below
+        }
+      }
+
+      // Handle successful validation
+      if (response.ok && data && data.success) {
         return {
           success: true,
-          message: 'Security PIN verified (Terminal Offline Safeguard).',
-          owner: 'Kalai',
-          role: 'Owner',
-          terminalDesk: 'TERMINAL-01 (Main POS)',
-          source: 'offline_terminal',
+          message: extractSafeErrorMessage(data.message, 'PIN verified successfully.'),
+          owner: typeof data.owner === 'string' ? data.owner : 'Kalai',
+          role: typeof data.role === 'string' ? data.role : 'Owner',
+          terminalDesk: typeof data.terminalDesk === 'string' ? data.terminalDesk : 'TERMINAL-01 (Main POS)',
+          source: endpoint.startsWith('http') ? 'render_backend' : 'vercel_api',
         };
       }
 
-      return {
-        success: false,
-        error: 'Incorrect Security PIN. Access denied.',
-        source: 'offline_terminal',
-      };
-    }
-
-    let data: any = null;
-    if (isJson) {
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        console.warn('Failed to parse backend JSON response:', parseErr);
+      // Handle Rate Limiting (429)
+      if (response.status === 429) {
+        isRateLimited = true;
+        remainingBlockedSecs = typeof data?.blockedSeconds === 'number' ? data.blockedSeconds : 60;
+        lastError = extractSafeErrorMessage(
+          data?.error,
+          `Too many failed attempts. Terminal locked for ${remainingBlockedSecs} seconds.`
+        );
+        break; // Stop trying other endpoints if rate-limited
       }
-    } else {
-      const text = await response.text();
-      console.warn('Backend returned non-JSON response:', text.substring(0, 150));
+
+      // Handle Wrong PIN (401)
+      if (response.status === 401 && data && data.error) {
+        return {
+          success: false,
+          error: extractSafeErrorMessage(data.error, 'Incorrect Security PIN. Access denied.'),
+          source: endpoint.startsWith('http') ? 'render_backend' : 'vercel_api',
+        };
+      }
+
+      // Handle 405 Method Not Allowed
+      if (response.status === 405) {
+        console.warn(`Endpoint ${endpoint} returned HTTP 405 (Method Not Allowed).`);
+        lastError = 'Authentication service method error (HTTP 405). Trying alternative route...';
+        continue;
+      }
+
+      // Handle 404 Not Found (e.g. backend route unmounted or Render down)
+      if (response.status === 404) {
+        console.warn(`Endpoint ${endpoint} returned HTTP 404.`);
+        lastError = 'Authentication service route not found (HTTP 404). Trying alternative route...';
+        continue;
+      }
+
+      // Non-JSON or other HTTP errors
+      if (!isJson) {
+        console.warn(`Endpoint ${endpoint} returned non-JSON HTTP ${response.status}.`);
+        lastError = `Server returned invalid response (HTTP ${response.status}).`;
+        continue;
+      }
+
+      // Generic error with response data
+      if (data && data.error) {
+        return {
+          success: false,
+          error: extractSafeErrorMessage(data.error, 'Verification failed. Please try again.'),
+        };
+      }
+    } catch (networkError: any) {
+      console.warn(`Failed to connect to ${endpoint}:`, networkError?.message || networkError);
+      lastError = 'Unable to reach authentication server. Check network connection.';
     }
+  }
 
-    if (response.ok && data && data.success) {
-      return {
-        success: true,
-        message: extractSafeErrorMessage(data.message, 'PIN verified successfully.'),
-        owner: typeof data.owner === 'string' ? data.owner : 'Kalai',
-        role: typeof data.role === 'string' ? data.role : 'Owner',
-        terminalDesk: typeof data.terminalDesk === 'string' ? data.terminalDesk : 'TERMINAL-01 (Main POS)',
-        source: 'render_backend',
-      };
-    }
-
-    // Rate-limit or incorrect PIN response
-    const safeError = extractSafeErrorMessage(
-      data?.error,
-      response.status === 429
-        ? 'Too many failed attempts. Security terminal locked.'
-        : 'Incorrect Security PIN. Access denied.'
-    );
-
+  // If rate-limited across all attempts
+  if (isRateLimited) {
     return {
       success: false,
-      error: safeError,
-      blockedSeconds: typeof data?.blockedSeconds === 'number' ? data.blockedSeconds : undefined,
-      source: 'render_backend',
-    };
-  } catch (networkError: any) {
-    console.warn('Backend PIN service unreachable or network error, invoking offline safeguard:', networkError);
-
-    // If backend is down or offline PWA mode, check owner PIN 1911
-    if (trimmedPin === '1911') {
-      return {
-        success: true,
-        message: 'Security PIN verified (Offline Terminal Safeguard).',
-        owner: 'Kalai',
-        role: 'Owner',
-        terminalDesk: 'TERMINAL-01 (Main POS)',
-        source: 'offline_terminal',
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Incorrect Security PIN. Access denied.',
-      source: 'offline_terminal',
+      error: lastError || 'Security terminal temporarily locked. Please wait.',
+      blockedSeconds: remainingBlockedSecs,
     };
   }
+
+  // If both endpoints failed due to network / 405 / 404
+  return {
+    success: false,
+    error: lastError || 'Security PIN verification failed. Please try again or check backend service status.',
+  };
 }
