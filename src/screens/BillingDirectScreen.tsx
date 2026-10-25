@@ -21,10 +21,7 @@ export const BillingDirectScreen: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState<string>('All');
-  const [cart, setCart] = useState<{ product: Product; qty: number }[]>([
-    { product: products[0], qty: 2 },
-    { product: products[5] || products[1], qty: 1 },
-  ]);
+  const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
   const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Bank Transfer'>('Cash');
   const [cashTendered, setCashTendered] = useState<number>(200);
   const [customerName, setCustomerName] = useState('Counter Walk-in Customer');

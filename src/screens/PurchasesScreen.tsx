@@ -39,25 +39,7 @@ export const PurchasesScreen: React.FC = () => {
   const [paidAmount, setPaidAmount] = useState(0);
   const [remarks, setRemarks] = useState('Refrigerated reefer truck receipt. Temperatures verified.');
 
-  const [lineItems, setLineItems] = useState<PurchaseItem[]>([
-    {
-      productId: products[0]?.id || '',
-      productName: products[0]?.name || '',
-      brand: products[0]?.brand || 'Amul',
-      batchNumber: `BT-${Date.now().toString().slice(-4)}`,
-      mfgDate: '2026-10-15',
-      expiryDate: '2027-04-15',
-      qty: 100,
-      unit: products[0]?.unit || 'Piece',
-      costRate: products[0]?.purchaseRate || 15.50,
-      gstRate: products[0]?.gstRate || 18,
-      taxAmount: (100 * (products[0]?.purchaseRate || 15.50) * (products[0]?.gstRate || 18)) / 100,
-      totalAmount:
-        100 * (products[0]?.purchaseRate || 15.50) +
-        (100 * (products[0]?.purchaseRate || 15.50) * (products[0]?.gstRate || 18)) / 100,
-      zone: products[0]?.primaryZone || 'Freezer A (-18°C Deep Freeze)',
-    },
-  ]);
+  const [lineItems, setLineItems] = useState<PurchaseItem[]>([]);
 
   const selectedPurchase = purchases.find((p) => p.id === selectedPurchaseId);
 
@@ -122,6 +104,14 @@ export const PurchasesScreen: React.FC = () => {
 
   const handleAddLine = () => {
     const defaultProd = products[0];
+    if (!defaultProd) {
+      addToast({
+        type: 'warning',
+        title: 'No Products Configured',
+        message: 'Please add at least one product in the Products tab before adding purchase line items.',
+      });
+      return;
+    }
     const tax = (50 * defaultProd.purchaseRate * defaultProd.gstRate) / 100;
     setLineItems([
       ...lineItems,
@@ -130,8 +120,8 @@ export const PurchasesScreen: React.FC = () => {
         productName: defaultProd.name,
         brand: defaultProd.brand,
         batchNumber: `BT-${Math.floor(100 + Math.random() * 900)}`,
-        mfgDate: '2026-10-15',
-        expiryDate: '2027-04-15',
+        mfgDate: new Date().toISOString().split('T')[0],
+        expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         qty: 50,
         unit: defaultProd.unit,
         costRate: defaultProd.purchaseRate,

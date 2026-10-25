@@ -34,29 +34,32 @@ export const DashboardScreen: React.FC = () => {
     companyInfo,
   } = useApp();
 
+  // Current Date string (YYYY-MM-DD)
+  const todayStr = new Date().toISOString().split('T')[0];
+
   // Metrics Calculations
   // Total Inventory Valuation (cost basis)
-  const totalInventoryValue = products.reduce((sum, p) => sum + p.currentStock * p.purchaseRate, 0);
+  const totalInventoryValue = products.reduce((sum, p) => sum + (p.currentStock || 0) * (p.purchaseRate || 0), 0);
 
-  // Today's Sales (invoices dated 2026-10-23)
-  const todayInvoices = invoices.filter((i) => i.date === '2026-10-23' && i.paymentStatus !== 'Cancelled');
-  const todaySalesTotal = todayInvoices.reduce((sum, i) => sum + i.grandTotal, 0);
+  // Today's Sales
+  const todayInvoices = invoices.filter((i) => i.date === todayStr && i.paymentStatus !== 'Cancelled');
+  const todaySalesTotal = todayInvoices.reduce((sum, i) => sum + (i.grandTotal || 0), 0);
 
   // Today's Purchases
-  const todayPurchases = purchases.filter((p) => p.billDate === '2026-10-23' && p.status === 'Posted');
-  const todayPurchasesTotal = todayPurchases.reduce((sum, p) => sum + p.grandTotal, 0);
+  const todayPurchases = purchases.filter((p) => p.billDate === todayStr && p.status === 'Posted');
+  const todayPurchasesTotal = todayPurchases.reduce((sum, p) => sum + (p.grandTotal || 0), 0);
 
   // Total Shop Receivables & Overdue
-  const totalShopOutstanding = shops.reduce((sum, s) => sum + s.outstandingAmount, 0);
-  const totalShopOverdue = shops.reduce((sum, s) => sum + s.overdueAmount, 0);
+  const totalShopOutstanding = shops.reduce((sum, s) => sum + (s.outstandingAmount || 0), 0);
+  const totalShopOverdue = shops.reduce((sum, s) => sum + (s.overdueAmount || 0), 0);
 
   // Total Supplier Payables
-  const totalSupplierPayables = suppliers.reduce((sum, s) => sum + s.outstandingPayable, 0);
+  const totalSupplierPayables = suppliers.reduce((sum, s) => sum + (s.outstandingPayable || 0), 0);
 
   // Today's Expenses
   const todayExpensesTotal = expenses
-    .filter((e) => e.date === '2026-10-23')
-    .reduce((sum, e) => sum + e.amount, 0);
+    .filter((e) => e.date === todayStr)
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
 
   // Estimated Gross Margin (Sales - Cost) on today's sales
   const todayCOGS = todayInvoices.reduce((sum, inv) => {
@@ -267,6 +270,12 @@ export const DashboardScreen: React.FC = () => {
             </div>
 
             <div className="mt-3 space-y-2 text-xs">
+              {nearExpiryBatches.length === 0 && lowStockProducts.length === 0 && (
+                <div className="p-4 text-center rounded bg-slate-50 border border-slate-200 text-slate-500">
+                  <p className="font-semibold text-slate-700">All Stock Healthy</p>
+                  <p className="text-[11px] mt-0.5">No near-expiry batches or low stock alerts.</p>
+                </div>
+              )}
               {nearExpiryBatches.slice(0, 3).map((item, idx) => (
                 <div
                   key={`exp-${idx}`}
@@ -357,46 +366,55 @@ export const DashboardScreen: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {invoices.slice(0, 6).map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-3 py-2.5 font-mono font-semibold text-slate-900">
-                    {inv.invoiceNumber}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-600">{formatDate(inv.date)}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-900">
-                    {inv.shopName}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-600">{inv.type}</td>
-                  <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
-                    {formatINR(inv.grandTotal, true)}
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-slate-700">
-                    {formatINR(inv.balanceAmount, true)}
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <StatusBadge
-                      label={inv.paymentStatus}
-                      variant={
-                        inv.paymentStatus === 'Paid'
-                          ? 'success'
-                          : inv.paymentStatus === 'Partial'
-                          ? 'warning'
-                          : inv.paymentStatus === 'Cancelled'
-                          ? 'neutral'
-                          : 'danger'
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    <button
-                      onClick={() => setPrintableInvoice(inv)}
-                      className="px-2 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors"
-                    >
-                      Print
-                    </button>
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                    <p className="font-semibold text-slate-700">No invoices recorded yet</p>
+                    <p className="text-xs mt-0.5">Generate a wholesale invoice or direct POS bill to start tracking sales.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                invoices.slice(0, 6).map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-3 py-2.5 font-mono font-semibold text-slate-900">
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600">{formatDate(inv.date)}</td>
+                    <td className="px-3 py-2.5 font-medium text-slate-900">
+                      {inv.shopName}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600">{inv.type}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                      {formatINR(inv.grandTotal, true)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-slate-700">
+                      {formatINR(inv.balanceAmount, true)}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <StatusBadge
+                        label={inv.paymentStatus}
+                        variant={
+                          inv.paymentStatus === 'Paid'
+                            ? 'success'
+                            : inv.paymentStatus === 'Partial'
+                            ? 'warning'
+                            : inv.paymentStatus === 'Cancelled'
+                            ? 'neutral'
+                            : 'danger'
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      <button
+                        onClick={() => setPrintableInvoice(inv)}
+                        className="px-2 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                      >
+                        Print
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

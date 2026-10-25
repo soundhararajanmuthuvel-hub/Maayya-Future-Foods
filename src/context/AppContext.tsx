@@ -1005,7 +1005,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast({
       type: 'info',
       title: 'Reset Completed',
-      message: 'All datasets restored to initial demonstration defaults (Heritage & Hangyo configured).',
+      message: 'All records and transaction data have been reset to a clean baseline.',
     });
   };
 

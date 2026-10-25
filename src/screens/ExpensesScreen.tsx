@@ -32,15 +32,15 @@ export const ExpensesScreen: React.FC = () => {
 
   // Expense form
   const [category, setCategory] = useState<ExpenseItem['category']>('Cold Storage Electricity');
-  const [amount, setAmount] = useState<number>(1500);
-  const [paidTo, setPaidTo] = useState('IOCL Fuel Station');
+  const [amount, setAmount] = useState<number>(0);
+  const [paidTo, setPaidTo] = useState('');
   const [paymentMode, setPaymentMode] = useState<'Cash' | 'Bank Transfer' | 'UPI'>('Cash');
-  const [description, setDescription] = useState('Fuel for refrigerated van dispatch route 2');
-  const [referenceNo, setReferenceNo] = useState(`EXP-REF-${Date.now().toString().slice(-4)}`);
+  const [description, setDescription] = useState('');
+  const [referenceNo, setReferenceNo] = useState('');
 
   // Daily Closing Form
-  const [physicalCount, setPhysicalCount] = useState<number>(dailyCash.physicalCountCash);
-  const [closingNotes, setClosingNotes] = useState('Evening cash drawer count complete. All van slips verified.');
+  const [physicalCount, setPhysicalCount] = useState<number>(dailyCash.physicalCountCash || 0);
+  const [closingNotes, setClosingNotes] = useState('');
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -49,14 +49,14 @@ export const ExpensesScreen: React.FC = () => {
     if (amount <= 0 || !paidTo.trim()) return;
 
     recordExpense({
-      date: '2026-10-23',
+      date: new Date().toISOString().split('T')[0],
       category,
       amount,
       paymentMode,
       paidTo,
       description,
-      referenceNo,
-      approvedBy: 'Operations Lead (Demo)',
+      referenceNo: referenceNo || `EXP-${Date.now().toString().slice(-4)}`,
+      approvedBy: 'Business Owner',
     });
 
     setIsAddExpenseModalOpen(false);

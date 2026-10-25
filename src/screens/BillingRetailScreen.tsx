@@ -35,31 +35,8 @@ export const BillingRetailScreen: React.FC = () => {
 
   const selectedShop = shops.find((s) => s.id === selectedShopId);
 
-  // Line items state
-  const [items, setItems] = useState<InvoiceItem[]>(() => {
-    const firstProd = products[0];
-    const bestBatch = firstProd?.batches[0];
-    const qty = 20;
-    const unitPrice = firstProd?.wholesaleRate || 19.50;
-    const gstRate = firstProd?.gstRate || 18;
-    const tax = (qty * unitPrice * gstRate) / 100;
-    return [
-      {
-        productId: firstProd?.id || '',
-        productCode: firstProd?.code || '',
-        productName: firstProd?.name || '',
-        brand: firstProd?.brand || 'Amul',
-        batchNumber: bestBatch?.batchNumber || 'BT-001',
-        expiryDate: bestBatch?.expiryDate || '2027-03-10',
-        qty,
-        unit: firstProd?.unit || 'Piece',
-        unitPrice,
-        gstRate,
-        taxAmount: tax,
-        totalAmount: qty * unitPrice + tax,
-      },
-    ];
-  });
+  // Line items state (starts clean, populated by user as items are added)
+  const [items, setItems] = useState<InvoiceItem[]>([]);
 
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
@@ -135,7 +112,15 @@ export const BillingRetailScreen: React.FC = () => {
 
   const handleAddLine = () => {
     const defaultProd = products[1] || products[0];
-    const sortedBatches = [...defaultProd.batches].sort(
+    if (!defaultProd) {
+      addToast({
+        type: 'warning',
+        title: 'No Products Configured',
+        message: 'Please add products in the Products tab before adding line items.',
+      });
+      return;
+    }
+    const sortedBatches = [...(defaultProd.batches || [])].sort(
       (a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
     );
     const bestBatch = sortedBatches.find((b) => b.quantity > 0) || sortedBatches[0];

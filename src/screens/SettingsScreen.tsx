@@ -108,7 +108,7 @@ export const SettingsScreen: React.FC = () => {
 
   // Backup state
   const [backupStatus, setBackupStatus] = useState<'Success' | 'Pending' | 'Connected' | 'Offline'>('Connected');
-  const [lastBackupTime, setLastBackupTime] = useState('2026-10-23 16:45');
+  const [lastBackupTime, setLastBackupTime] = useState('No export generated yet');
   const [restoreJson, setRestoreJson] = useState('');
   const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
 
@@ -1117,14 +1117,14 @@ export const SettingsScreen: React.FC = () => {
             <div className="flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-amber-700 shrink-0" />
               <span>
-                Want to revert all changes back to initial prototype defaults?
+                Want to clear all transactions, bills, and custom entries to reset the workspace?
               </span>
             </div>
             <button
               onClick={resetAllDemoData}
               className="px-3 py-1 font-semibold text-amber-950 bg-amber-200/80 hover:bg-amber-300 rounded"
             >
-              Reset Demo Records
+              Clear & Reset Records
             </button>
           </div>
         </div>
