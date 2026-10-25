@@ -31,12 +31,18 @@ export interface OwnerEntityConfig {
   role: string;
 }
 
+export interface TerminalSecurityConfig {
+  terminalDesk: string;
+  defaultPin: string;
+}
+
 export interface AppMetadataConfig {
   productName: string;
   shortDescription: string;
   applicationType: string;
   stack: DeploymentStackConfig;
   owner: OwnerEntityConfig;
+  terminalSecurity: TerminalSecurityConfig;
   client: OrganizationEntityConfig;
   developer: DeveloperEntityConfig;
 }
@@ -54,6 +60,10 @@ export const APP_CONFIG: AppMetadataConfig = {
   owner: {
     name: 'Kalai',
     role: 'Owner',
+  },
+  terminalSecurity: {
+    terminalDesk: 'TERMINAL-01 (Main POS)',
+    defaultPin: (import.meta as any).env?.VITE_OWNER_PIN || '1911',
   },
   client: {
     companyName: 'Maayya Future Foods',

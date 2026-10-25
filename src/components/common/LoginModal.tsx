@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MsrLogo } from './MsrLogo';
-import { Lock, User, KeyRound, Shield, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { Lock, User, KeyRound, Shield, CheckCircle, ArrowRight, X, Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { APP_CONFIG } from '../../config/appConfig';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -11,14 +12,31 @@ interface LoginModalProps {
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const { addToast, companyInfo } = useApp();
 
-  const [pin, setPin] = useState('1240');
-  const ownerName = 'Kalai';
-  const ownerRole = 'Owner';
+  const validPin = APP_CONFIG.terminalSecurity?.defaultPin || '1911';
+  const terminalDesk = APP_CONFIG.terminalSecurity?.terminalDesk || 'TERMINAL-01 (Main POS)';
+  const ownerName = APP_CONFIG.owner?.name || 'Kalai';
+  const ownerRole = APP_CONFIG.owner?.role || 'Owner';
+
+  const [pin, setPin] = useState(validPin);
+  const [showPin, setShowPin] = useState(false);
+  const [pinError, setPinError] = useState('');
 
   if (!isOpen) return null;
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (pin.trim() !== validPin) {
+      setPinError('Invalid Security PIN. Access denied.');
+      addToast({
+        type: 'error',
+        title: 'Authentication Failed',
+        message: 'Invalid Security PIN. Please enter the authorized PIN.',
+      });
+      return;
+    }
+
+    setPinError('');
     addToast({
       type: 'success',
       title: 'Authenticated Successfully',
@@ -100,24 +118,54 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Security PIN</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">Security PIN</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1 focus:outline-none"
+                  title={showPin ? 'Hide PIN' : 'Reveal PIN'}
+                >
+                  {showPin ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>Hide</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Show</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPin ? 'text' : 'password'}
                   value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded font-mono tracking-widest pl-8"
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setPinError('');
+                  }}
+                  className={`w-full px-3 py-1.5 text-xs border rounded font-mono tracking-widest pl-8 ${
+                    pinError
+                      ? 'border-rose-400 bg-rose-50/40 text-rose-900 focus:ring-rose-500'
+                      : 'border-slate-300 text-slate-900 focus:ring-slate-900'
+                  }`}
                   placeholder="••••"
                   required
                 />
                 <KeyRound className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" />
               </div>
+              {pinError && (
+                <p className="text-[11px] text-rose-600 mt-1 font-medium">{pinError}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Terminal Desk</label>
               <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded text-xs font-mono text-slate-600 truncate">
-                TERMINAL-01 (Main POS)
+                {terminalDesk}
               </div>
             </div>
           </div>
