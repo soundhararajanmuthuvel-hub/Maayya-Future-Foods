@@ -19,6 +19,8 @@ import {
   Lock,
   Menu,
   WifiOff,
+  RotateCw,
+  Database,
 } from 'lucide-react';
 import { MsrLogo } from '../common/MsrLogo';
 
@@ -35,8 +37,11 @@ export const TopBar: React.FC = () => {
     products,
     dailyCash,
     companyInfo,
+    isDataLoadedFromBackend,
+    reloadWorkspaceFromBackend,
   } = useApp();
 
+  const [isSyncing, setIsSyncing] = useState(false);
   const isOnline = useOnlineStatus();
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
 
@@ -139,6 +144,26 @@ export const TopBar: React.FC = () => {
           <kbd className="hidden lg:inline text-[10px] font-mono bg-white px-1.5 py-0.2 rounded border border-slate-200 text-slate-400">
             ⌘K
           </kbd>
+        </button>
+
+        {/* Global Cloud Database Sync Button */}
+        <button
+          onClick={async () => {
+            setIsSyncing(true);
+            try {
+              await reloadWorkspaceFromBackend();
+            } finally {
+              setIsSyncing(false);
+            }
+          }}
+          disabled={isSyncing}
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200 rounded transition-colors shadow-xs"
+          title="Sync with Render PostgreSQL database (Mobile & Laptop live sync)"
+        >
+          <RotateCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-700'}`} />
+          <span className="hidden md:inline font-mono text-[11px]">
+            {isSyncing ? 'Syncing...' : 'Render Live'}
+          </span>
         </button>
 
         {/* Quick Action Buttons */}

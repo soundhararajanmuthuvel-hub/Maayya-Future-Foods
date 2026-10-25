@@ -145,6 +145,8 @@ interface AppContextType {
   auditLog: AuditLogEntry[];
   brands: Brand[];
   companyInfo: CompanyInfo;
+  isDataLoadedFromBackend: boolean;
+  reloadWorkspaceFromBackend: () => Promise<void>;
 
   // Toast
   toasts: ToastMessage[];
@@ -934,11 +936,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           title: 'Product Created',
           message: `${newProd.name} saved to Render PostgreSQL database.`,
         });
+        reloadWorkspaceFromBackend();
       } else {
         addToast({
-          type: 'info',
-          title: 'Product Created',
-          message: `${newProd.name} added to catalog with base stock.`,
+          type: 'error',
+          title: 'Database Persistence Error',
+          message: res.error || `Failed to persist ${newProd.name} to PostgreSQL.`,
         });
       }
     });
@@ -951,15 +954,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveProductToBackend(prod).then((res) => {
       if (res.success) {
         addToast({
-          type: 'info',
+          type: 'success',
           title: 'Product Updated',
           message: `${prod.name} changes committed to PostgreSQL.`,
         });
+        reloadWorkspaceFromBackend();
       } else {
         addToast({
-          type: 'info',
-          title: 'Product Updated',
-          message: `${prod.name} changes saved.`,
+          type: 'error',
+          title: 'Database Update Error',
+          message: res.error || `Failed to update ${prod.name} in PostgreSQL.`,
         });
       }
     });
@@ -983,11 +987,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           title: 'Retail Shop Added',
           message: `${newShop.shopName} saved to PostgreSQL with credit limit ₹${newShop.creditLimit.toLocaleString('en-IN')}`,
         });
+        reloadWorkspaceFromBackend();
       } else {
         addToast({
-          type: 'info',
-          title: 'Retail Shop Added',
-          message: `${newShop.shopName} added with credit limit ₹${newShop.creditLimit.toLocaleString('en-IN')}`,
+          type: 'error',
+          title: 'Database Persistence Error',
+          message: res.error || `Failed to persist ${newShop.shopName} to PostgreSQL.`,
         });
       }
     });
@@ -995,12 +1000,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateShop = (shop: RetailShop) => {
     setShops((prev) => prev.map((s) => (s.id === shop.id ? shop : s)));
-    saveShopToBackend(shop).then(() => {
-      addToast({
-        type: 'info',
-        title: 'Shop Updated',
-        message: `${shop.shopName} profile updated in PostgreSQL.`,
-      });
+    saveShopToBackend(shop).then((res) => {
+      if (res.success) {
+        addToast({
+          type: 'success',
+          title: 'Shop Updated',
+          message: `${shop.shopName} profile updated in PostgreSQL.`,
+        });
+        reloadWorkspaceFromBackend();
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Database Update Error',
+          message: res.error || `Failed to update ${shop.shopName} in PostgreSQL.`,
+        });
+      }
     });
   };
 
@@ -1434,6 +1448,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLog,
         brands,
         companyInfo,
+        isDataLoadedFromBackend,
+        reloadWorkspaceFromBackend,
         toasts,
         addToast,
         dismissToast,

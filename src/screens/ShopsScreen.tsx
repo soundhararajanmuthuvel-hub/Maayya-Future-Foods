@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { RetailShop, Invoice } from '../types';
 import { formatINR, formatDate } from '../utils/formatters';
@@ -18,6 +18,7 @@ import {
   Ban,
   MessageSquare,
   ExternalLink,
+  RotateCw,
 } from 'lucide-react';
 
 export const ShopsScreen: React.FC = () => {
@@ -33,7 +34,30 @@ export const ShopsScreen: React.FC = () => {
     setPrintableInvoice,
     addToast,
     companyInfo,
+    reloadWorkspaceFromBackend,
   } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-sync shops when opening the screen or switching back to this tab
+  useEffect(() => {
+    reloadWorkspaceFromBackend();
+
+    const handleFocus = () => {
+      reloadWorkspaceFromBackend();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        reloadWorkspaceFromBackend();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<RetailShop | null>(null);
@@ -404,13 +428,31 @@ export const ShopsScreen: React.FC = () => {
         }
         onRowClick={(s) => setSelectedShopId(s.id)}
         actions={
-          <button
-            onClick={handleOpenAddShop}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Retail Shop</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setIsRefreshing(true);
+                try {
+                  await reloadWorkspaceFromBackend();
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-xs"
+              title="Refresh retail shops directory directly from Render PostgreSQL"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">Refresh Sync</span>
+            </button>
+            <button
+              onClick={handleOpenAddShop}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Retail Shop</span>
+            </button>
+          </div>
         }
       />
 

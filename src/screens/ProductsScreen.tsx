@@ -1,14 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Product, BrandName, ProductCategory } from '../types';
 import { formatINR, getStockStatus } from '../utils/formatters';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
-import { Plus, Eye, Edit, Package, Layers, Warehouse, TrendingUp, Sparkles } from 'lucide-react';
+import { Plus, Eye, Edit, Package, Layers, Warehouse, TrendingUp, Sparkles, RotateCw } from 'lucide-react';
 
 export const ProductsScreen: React.FC = () => {
-  const { products, brands, selectedProductId, setSelectedProductId, addProduct, updateProduct } = useApp();
+  const {
+    products,
+    brands,
+    selectedProductId,
+    setSelectedProductId,
+    addProduct,
+    updateProduct,
+    reloadWorkspaceFromBackend,
+  } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-sync products when opening the screen or switching back to this tab
+  useEffect(() => {
+    reloadWorkspaceFromBackend();
+
+    const handleFocus = () => {
+      reloadWorkspaceFromBackend();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        reloadWorkspaceFromBackend();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   const [activeBrand, setActiveBrand] = useState<string>('All');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -304,13 +334,31 @@ export const ProductsScreen: React.FC = () => {
         }
         onRowClick={(p) => setSelectedProductId(p.id)}
         actions={
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Product</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setIsRefreshing(true);
+                try {
+                  await reloadWorkspaceFromBackend();
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-xs"
+              title="Refresh product catalog directly from Render PostgreSQL"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">Refresh Sync</span>
+            </button>
+            <button
+              onClick={handleOpenAdd}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Product</span>
+            </button>
+          </div>
         }
       />
 
