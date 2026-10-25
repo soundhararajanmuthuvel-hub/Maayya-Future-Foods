@@ -117,14 +117,14 @@ export const MsrLogo: React.FC<MsrLogoProps> = ({
             </span>
           </div>
           <span className="text-[10px] text-slate-500 font-medium mt-1">
-            Enterprise Solutions & ERP Architecture
+            Software Development & Engineering
           </span>
         </div>
       </div>
     );
   }
 
-  // Hero variant (used in Login screen & About modal)
+  // Hero variant (used in Login screen)
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
       <div className="p-3 rounded-2xl bg-slate-900 shadow-xl border border-slate-800 ring-1 ring-sky-500/20">
@@ -139,12 +139,9 @@ export const MsrLogo: React.FC<MsrLogoProps> = ({
           >
             MSR SOLUTIONS
           </span>
-          <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-sky-500/20 text-sky-500 border border-sky-400/30">
-            OFFICIAL DEVELOPER
-          </span>
         </div>
-        <p className="text-xs text-slate-500 mt-1 font-medium">
-          Enterprise Software Architecture & Smart Business Solutions
+        <p className="text-xs text-slate-400 mt-1 font-medium">
+          Software Developer
         </p>
       </div>
     </div>

@@ -223,6 +223,7 @@ export const Sidebar: React.FC = () => {
         </div>
         <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 pt-1 border-t border-slate-900">
           <span>CLIENT: {companyInfo.name.toUpperCase()}</span>
+          <span>© 2026 MSR</span>
         </div>
       </div>
     </aside>

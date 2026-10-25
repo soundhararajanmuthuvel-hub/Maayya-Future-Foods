@@ -1,6 +1,0 @@
-{
-  "name": "Maayya Future Foods — Smart Business Manager",
-  "description": "Enterprise-grade business management and cold-chain accounting system for Maayya Future Foods, featuring multi-brand invoices, POS, inventory batches, shop receivables, and P&L.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

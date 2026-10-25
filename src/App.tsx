@@ -1,11 +1,11 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Maayya Future Foods — Smart Business Manager
+ * Developed and maintained by MSR Solutions
+ * © 2026 MSR Solutions. All rights reserved.
  */
 
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { DemoBanner } from './components/common/DemoBanner';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { InvoicePrintModal } from './components/common/InvoicePrintModal';
@@ -85,9 +85,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100/90 text-slate-800 font-sans flex flex-col antialiased selection:bg-slate-800 selection:text-white">
-      {/* Top Demonstration Prototype Banner */}
-      <DemoBanner />
-
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden">
         {/* Fixed Navy Sidebar */}
@@ -111,6 +108,8 @@ const MainLayout: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                 Developed by MSR Solutions
               </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-600 font-medium">© 2026 MSR Solutions</span>
               <span className="text-slate-300">|</span>
               <span className="text-slate-600 truncate">
                 Product: <strong className="text-slate-800 font-medium">{companyInfo.name} — Smart Business Manager</strong>

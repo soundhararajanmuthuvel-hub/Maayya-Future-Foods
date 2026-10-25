@@ -138,7 +138,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         {/* Footer controls */}
         <div className="pt-2 flex items-center justify-between text-xs">
           <span className="text-[11px] text-slate-500">
-            Developed by {developerName}
+            Developed by {developerName} • © 2026 MSR Solutions
           </span>
           <button
             onClick={onClose}
