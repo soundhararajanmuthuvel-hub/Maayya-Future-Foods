@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/((?!assets/|pwa-.*|favicon\\.png|apple-touch-icon\\.png|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

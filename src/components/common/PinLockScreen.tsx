@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
-import { Lock, KeyRound, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
-import { verifySecurityPinWithBackend } from '../../services/authService';
+import {
+  Lock,
+  KeyRound,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
+import { verifySecurityPinWithBackend, extractSafeErrorMessage } from '../../services/authService';
 
 interface PinLockScreenProps {
   onUnlock: () => void;
@@ -9,33 +19,48 @@ interface PinLockScreenProps {
 export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [hasConnectionIssue, setHasConnectionIssue] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!pin.trim()) {
+    const cleanPin = pin.trim();
+    if (!cleanPin) {
       setErrorMsg('Please enter your Security PIN.');
       return;
     }
 
     setIsVerifying(true);
     setErrorMsg('');
+    setHasConnectionIssue(false);
 
     try {
-      const result = await verifySecurityPinWithBackend(pin);
+      const result = await verifySecurityPinWithBackend(cleanPin);
 
       if (result.success) {
         onUnlock();
       } else {
-        setErrorMsg(result.error || 'Incorrect Security PIN. Access denied.');
+        // Guaranteed string extraction — never pass raw objects into React state
+        const safeError = extractSafeErrorMessage(result.error, 'Incorrect Security PIN. Access denied.');
+        setErrorMsg(safeError);
         setPin('');
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Verification error occurred.');
+    } catch (err: unknown) {
+      const safeError = extractSafeErrorMessage(err, 'Verification service unreachable.');
+      setErrorMsg(safeError);
+      setHasConnectionIssue(true);
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setErrorMsg('');
+    setHasConnectionIssue(false);
+    if (pin.trim()) {
+      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
     }
   };
 
@@ -119,6 +144,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
                 onChange={(e) => {
                   setPin(e.target.value);
                   setErrorMsg('');
+                  setHasConnectionIssue(false);
                 }}
                 className={`w-full px-4 py-2.5 text-center text-lg tracking-[0.3em] font-mono border rounded-lg pl-10 pr-10 focus:outline-none transition-colors ${
                   errorMsg
@@ -132,9 +158,21 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
             </div>
 
             {errorMsg ? (
-              <div className="flex items-center gap-1.5 mt-2 text-rose-600 text-xs font-medium">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errorMsg}</span>
+              <div className="flex flex-col gap-1.5 mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span className="break-words">{String(errorMsg)}</span>
+                </div>
+                {hasConnectionIssue && (
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="self-start mt-1 text-[11px] text-rose-700 underline hover:text-rose-900 flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Retry Verification</span>
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-[11px] text-slate-500 mt-2 text-center">
@@ -149,9 +187,18 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({ onUnlock }) => {
               disabled={isVerifying || !pin}
               className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>{isVerifying ? 'Verifying PIN...' : 'Unlock Workspace'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-4 h-4 text-sky-400 animate-spin" />
+                  <span>Verifying PIN...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Unlock Workspace</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { PinLockScreen } from './components/common/PinLockScreen';
@@ -116,7 +117,9 @@ const MainLayout: React.FC = () => {
           {/* Main Scrollable Viewport with bottom padding for mobile navigation */}
           <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-20 lg:pb-6 bg-slate-100/70">
             <div className="max-w-[1600px] mx-auto">
-              {renderActiveScreen()}
+              <ErrorBoundary>
+                {renderActiveScreen()}
+              </ErrorBoundary>
             </div>
           </main>
 
@@ -187,8 +190,10 @@ const MainLayout: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
