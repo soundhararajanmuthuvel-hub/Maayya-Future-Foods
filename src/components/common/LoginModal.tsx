@@ -4,6 +4,8 @@ import { Lock, User, KeyRound, Shield, CheckCircle, ArrowRight, X, Eye, EyeOff }
 import { useApp } from '../../context/AppContext';
 import { APP_CONFIG } from '../../config/appConfig';
 
+import { verifySecurityPinWithBackend } from '../../services/authService';
+
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,37 +14,49 @@ interface LoginModalProps {
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const { addToast, companyInfo } = useApp();
 
-  const validPin = APP_CONFIG.terminalSecurity?.defaultPin || '1911';
   const terminalDesk = APP_CONFIG.terminalSecurity?.terminalDesk || 'TERMINAL-01 (Main POS)';
   const ownerName = APP_CONFIG.owner?.name || 'Kalai';
   const ownerRole = APP_CONFIG.owner?.role || 'Owner';
 
-  const [pin, setPin] = useState(validPin);
+  const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [pinError, setPinError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (pin.trim() !== validPin) {
-      setPinError('Invalid Security PIN. Access denied.');
-      addToast({
-        type: 'error',
-        title: 'Authentication Failed',
-        message: 'Invalid Security PIN. Please enter the authorized PIN.',
-      });
+    if (!pin.trim()) {
+      setPinError('Please enter Security PIN.');
       return;
     }
 
+    setIsVerifying(true);
     setPinError('');
-    addToast({
-      type: 'success',
-      title: 'Authenticated Successfully',
-      message: `Signed in as ${ownerName} (${ownerRole}). Workspace verified.`,
-    });
-    onClose();
+
+    try {
+      const result = await verifySecurityPinWithBackend(pin);
+
+      if (result.success) {
+        addToast({
+          type: 'success',
+          title: 'Authenticated Successfully',
+          message: `Signed in as ${ownerName} (${ownerRole}). Workspace verified.`,
+        });
+        onClose();
+      } else {
+        setPinError(result.error || 'Invalid Security PIN. Access denied.');
+        addToast({
+          type: 'error',
+          title: 'Authentication Failed',
+          message: result.error || 'Invalid Security PIN. Please enter the authorized PIN.',
+        });
+      }
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   return (

@@ -4,10 +4,11 @@
  * © 2026 MSR Solutions. All rights reserved.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { PinLockScreen } from './components/common/PinLockScreen';
 import { InvoicePrintModal } from './components/common/InvoicePrintModal';
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
 import { KeyboardShortcutsModal } from './components/common/KeyboardShortcutsModal';
@@ -36,6 +37,10 @@ import { ReportsScreen } from './screens/ReportsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 const MainLayout: React.FC = () => {
+  // In-memory state: always resets to false on every browser refresh or new tab load
+  // Never stored in localStorage, sessionStorage, cookies, or IndexedDB
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
   const {
     currentScreen,
     printableInvoice,
@@ -50,6 +55,17 @@ const MainLayout: React.FC = () => {
     setIsPWAInstallModalOpen,
     companyInfo,
   } = useApp();
+
+  // If not unlocked, render ONLY the full-screen PIN lock screen
+  // Zero business data, invoices, dashboard, or customer records are rendered
+  if (!isUnlocked) {
+    return (
+      <>
+        <PinLockScreen onUnlock={() => setIsUnlocked(true)} />
+        <ToastContainer />
+      </>
+    );
+  }
 
   const renderActiveScreen = () => {
     switch (currentScreen) {

@@ -33,7 +33,6 @@ export interface OwnerEntityConfig {
 
 export interface TerminalSecurityConfig {
   terminalDesk: string;
-  defaultPin: string;
 }
 
 export interface AppMetadataConfig {
@@ -63,7 +62,6 @@ export const APP_CONFIG: AppMetadataConfig = {
   },
   terminalSecurity: {
     terminalDesk: 'TERMINAL-01 (Main POS)',
-    defaultPin: (import.meta as any).env?.VITE_OWNER_PIN || '1911',
   },
   client: {
     companyName: 'Maayya Future Foods',

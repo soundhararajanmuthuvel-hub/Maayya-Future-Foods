@@ -1,6 +1,7 @@
 import express from 'express';
 import webpush from 'web-push';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -178,6 +179,106 @@ app.get('/api/push/status', (_req, res) => {
     vapidConfigured: isVapidConfigured,
     subject: VAPID_SUBJECT,
     backendStatus: 'healthy',
+  });
+});
+
+// ==========================================
+// Mandatory Security PIN Verification Engine
+// ==========================================
+// Stored securely on Render backend (environment variable or default 1911)
+const OWNER_SECURITY_PIN = process.env.OWNER_SECURITY_PIN || '1911';
+// Salted SHA-256 hash calculation for constant-time comparison
+const PIN_SALT = process.env.PIN_SALT || 'maayya-future-foods-msr-2026';
+const HASHED_OWNER_PIN = crypto
+  .createHash('sha256')
+  .update(`${OWNER_SECURITY_PIN}:${PIN_SALT}`)
+  .digest('hex');
+
+// In-memory rate limiting against brute force
+interface RateLimitRecord {
+  attempts: number;
+  blockedUntil: number;
+}
+const pinRateLimitMap = new Map<string, RateLimitRecord>();
+
+app.post('/api/auth/verify-pin', (req, res) => {
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
+    req.socket.remoteAddress ||
+    'anonymous';
+  const now = Date.now();
+
+  const clientLimit = pinRateLimitMap.get(ip) || { attempts: 0, blockedUntil: 0 };
+
+  // Check if IP is currently blocked
+  if (clientLimit.blockedUntil > now) {
+    const remainingSecs = Math.ceil((clientLimit.blockedUntil - now) / 1000);
+    res.status(429).json({
+      success: false,
+      error: `Too many failed attempts. Security terminal locked. Please wait ${remainingSecs} seconds.`,
+      blockedSeconds: remainingSecs,
+    });
+    return;
+  }
+
+  const { pin } = req.body || {};
+
+  if (!pin || typeof pin !== 'string') {
+    res.status(400).json({ success: false, error: 'PIN must be a valid non-empty string.' });
+    return;
+  }
+
+  // Hash submitted pin with salt
+  const submittedHash = crypto
+    .createHash('sha256')
+    .update(`${pin.trim()}:${PIN_SALT}`)
+    .digest('hex');
+
+  // Constant-time comparison
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(submittedHash, 'utf8'),
+    Buffer.from(HASHED_OWNER_PIN, 'utf8')
+  );
+
+  if (isValid) {
+    // Reset rate limiter on success
+    pinRateLimitMap.delete(ip);
+    res.json({
+      success: true,
+      message: 'Security PIN verified successfully. Workspace unlocked.',
+      owner: 'Kalai',
+      role: 'Owner',
+      terminalDesk: 'TERMINAL-01 (Main POS)',
+    });
+    return;
+  }
+
+  // Handle failed attempt
+  clientLimit.attempts += 1;
+  if (clientLimit.attempts >= 5) {
+    clientLimit.blockedUntil = now + 60 * 1000; // 60 seconds lockout
+    pinRateLimitMap.set(ip, clientLimit);
+    res.status(429).json({
+      success: false,
+      error: 'Security alert: 5 consecutive failed attempts. Terminal locked for 60 seconds.',
+      blockedSeconds: 60,
+    });
+    return;
+  }
+
+  pinRateLimitMap.set(ip, clientLimit);
+  res.status(401).json({
+    success: false,
+    error: `Incorrect Security PIN. (${5 - clientLimit.attempts} attempt(s) remaining)`,
+  });
+});
+
+app.get('/api/auth/pin-status', (_req, res) => {
+  res.json({
+    required: true,
+    owner: 'Kalai',
+    terminalDesk: 'TERMINAL-01 (Main POS)',
+    status: 'active',
   });
 });
 
