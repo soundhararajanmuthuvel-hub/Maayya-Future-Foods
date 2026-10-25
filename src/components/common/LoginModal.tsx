@@ -11,51 +11,18 @@ interface LoginModalProps {
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const { addToast, companyInfo } = useApp();
 
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'billing' | 'inventory'>('admin');
   const [pin, setPin] = useState('1240');
-  const [userName, setUserName] = useState('Rajesh Kumar (Store Manager)');
+  const ownerName = 'Kalai';
+  const ownerRole = 'Owner';
 
   if (!isOpen) return null;
-
-  const users = [
-    {
-      role: 'admin' as const,
-      name: 'Rajesh Kumar',
-      title: 'Store Operations Manager',
-      email: 'rajesh@mayafuturefoods.com',
-      pin: '1240',
-      badge: 'Full Access',
-    },
-    {
-      role: 'billing' as const,
-      name: 'Suresh V',
-      title: 'Senior POS Cashier',
-      email: 'suresh@mayafuturefoods.com',
-      pin: '5521',
-      badge: 'Billing & Cash',
-    },
-    {
-      role: 'inventory' as const,
-      name: 'Priya Sundaram',
-      title: 'Cold Storage Auditor',
-      email: 'priya@mayafuturefoods.com',
-      pin: '8832',
-      badge: 'Stock & Batches',
-    },
-  ];
-
-  const handleSelectUser = (user: typeof users[0]) => {
-    setSelectedRole(user.role);
-    setUserName(`${user.name} (${user.title})`);
-    setPin(user.pin);
-  };
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     addToast({
       type: 'success',
       title: 'Authenticated Successfully',
-      message: `Signed in as ${userName}. Workspace loaded.`,
+      message: `Signed in as ${ownerName} (${ownerRole}). Workspace verified.`,
     });
     onClose();
   };
@@ -113,40 +80,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleSignIn} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Select Operating Profile
+              Authorized Owner Profile
             </label>
-            <div className="grid grid-cols-1 gap-2">
-              {users.map((u) => {
-                const isSelected = selectedRole === u.role;
-                return (
-                  <div
-                    key={u.role}
-                    onClick={() => handleSelectUser(u)}
-                    className={`p-2.5 rounded-lg border text-xs cursor-pointer flex items-center justify-between transition-all ${
-                      isSelected
-                        ? 'border-sky-600 bg-sky-50/60 ring-1 ring-sky-500 shadow-xs'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                          isSelected ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {u.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900">{u.name}</div>
-                        <div className="text-[11px] text-slate-500">{u.title}</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium border border-slate-200">
-                      {u.badge}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="p-3 rounded-lg border border-sky-600 bg-sky-50/60 ring-1 ring-sky-500 shadow-xs flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm ring-1 ring-slate-800">
+                  K
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900">{ownerName}</div>
+                  <div className="text-[11px] text-slate-600 font-medium">Single-User Business Owner</div>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                Full Owner Access
+              </span>
             </div>
           </div>
 

@@ -406,7 +406,7 @@ export const PurchasesScreen: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Inward Items & Cold Storage Allocation
+                Inward Items & Batch Allocation
               </span>
               <button
                 type="button"

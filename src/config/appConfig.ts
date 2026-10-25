@@ -26,11 +26,17 @@ export interface DeploymentStackConfig {
   database: string;
 }
 
+export interface OwnerEntityConfig {
+  name: string;
+  role: string;
+}
+
 export interface AppMetadataConfig {
   productName: string;
   shortDescription: string;
   applicationType: string;
   stack: DeploymentStackConfig;
+  owner: OwnerEntityConfig;
   client: OrganizationEntityConfig;
   developer: DeveloperEntityConfig;
 }
@@ -44,6 +50,10 @@ export const APP_CONFIG: AppMetadataConfig = {
     frontend: 'Vercel',
     backend: 'Render',
     database: 'Render PostgreSQL',
+  },
+  owner: {
+    name: 'Kalai',
+    role: 'Owner',
   },
   client: {
     companyName: 'Maayya Future Foods',

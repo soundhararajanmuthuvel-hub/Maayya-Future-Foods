@@ -82,6 +82,38 @@
     overflow: visible !important;
   }
 
+  /* Specific invoice sheet printing rules */
+  .invoice-print-sheet {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    font-size: 10.5pt !important;
+    line-height: 1.35 !important;
+    page-break-after: auto !important;
+  }
+
+  /* When printing an invoice, hide everything else in the body */
+  body.printing-invoice * {
+    visibility: hidden;
+  }
+
+  body.printing-invoice .invoice-print-sheet,
+  body.printing-invoice .invoice-print-sheet * {
+    visibility: visible;
+  }
+
+  body.printing-invoice .invoice-print-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
   /* High contrast table borders and tabular layout for invoices, statements & reports */
   table {
     width: 100% !important;
@@ -96,8 +128,8 @@
 
   th,
   td {
-    border: 1px solid #94a3b8 !important; /* High-contrast crisp border */
-    padding: 6px 8px !important;
+    border: 1px solid #cbd5e1 !important; /* Crisp slate border */
+    padding: 5px 7px !important;
     background: #ffffff !important;
   }
 
@@ -106,7 +138,7 @@
   }
 
   thead th {
-    background-color: #f1f5f9 !important;
+    background-color: #f8fafc !important;
     color: #000000 !important;
     font-weight: 700 !important;
   }

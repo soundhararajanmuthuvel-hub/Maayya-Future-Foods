@@ -94,8 +94,62 @@ export const DashboardScreen: React.FC = () => {
 
   const lowStockProducts = products.filter((p) => p.currentStock <= p.reorderLevel);
 
+  // Greeting logic for Owner Kalai based on current local time
+  const currentHour = new Date().getHours();
+  const greetingText =
+    currentHour < 12
+      ? 'Good morning, Kalai'
+      : currentHour < 17
+      ? 'Good afternoon, Kalai'
+      : 'Good evening, Kalai';
+
+  const formattedCurrentDate = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
     <div className="space-y-4">
+      {/* Personalized Owner Greeting Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-xl p-4 sm:p-5 text-white border border-slate-800 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold font-serif tracking-tight text-white">
+              {greetingText}
+            </h1>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-semibold border border-emerald-500/30">
+              Owner · Maayya Future Foods
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 mt-1 flex items-center gap-2">
+            <span>{formattedCurrentDate}</span>
+            <span>•</span>
+            <span className="text-slate-200 font-medium">
+              Today's Overview: {formatINR(todaySalesTotal)} sales billed ({todayInvoices.length} orders) · {shops.length} active retail shops
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => setCurrentScreen('billing-direct')}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-xs transition-colors shadow-xs"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>Fast Direct POS</span>
+          </button>
+          <button
+            onClick={() => setCurrentScreen('billing-retail')}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 rounded-lg font-medium text-xs transition-colors"
+          >
+            <Store className="w-3.5 h-3.5 text-sky-400" />
+            <span>Retail Dispatch</span>
+          </button>
+        </div>
+      </div>
+
       {/* Dashboard Brand Header */}
       <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
@@ -106,11 +160,11 @@ export const DashboardScreen: React.FC = () => {
           />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-slate-950 font-serif tracking-tight">
+              <h2 className="text-sm font-bold text-slate-950 font-serif tracking-tight">
                 {companyInfo.name}
-              </h1>
+              </h2>
               <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-semibold">
-                {companyInfo.city} Hub · Cold Chain Online
+                {companyInfo.city} Central Hub
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
@@ -124,14 +178,6 @@ export const DashboardScreen: React.FC = () => {
             <span className="text-[10px] text-slate-400 font-mono block">DEVELOPED BY</span>
             <span className="text-xs font-semibold text-sky-700">MSR Solutions</span>
           </div>
-          <div className="h-6 w-px bg-slate-200 hidden md:block" />
-          <button
-            onClick={() => setCurrentScreen('billing-direct')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium text-xs transition-colors shadow-xs"
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>Fast Direct POS</span>
-          </button>
         </div>
       </div>
 

@@ -16,6 +16,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Ban,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 
 export const ShopsScreen: React.FC = () => {
@@ -30,12 +32,20 @@ export const ShopsScreen: React.FC = () => {
     recordShopPayment,
     setPrintableInvoice,
     addToast,
+    companyInfo,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<RetailShop | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentTargetShop, setPaymentTargetShop] = useState<RetailShop | null>(null);
+
+  // WhatsApp Reminder State
+  const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false);
+  const [whatsappTargetShop, setWhatsappTargetShop] = useState<RetailShop | null>(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappPhoneError, setWhatsappPhoneError] = useState('');
 
   // Shop Form state
   const [shopForm, setShopForm] = useState({
@@ -119,6 +129,75 @@ export const ShopsScreen: React.FC = () => {
     setPayRef(`UPI-${Date.now().toString().slice(-6)}`);
     setPayNotes(`Collections against unpaid invoices for ${shop.shopName}`);
     setIsPaymentModalOpen(true);
+  };
+
+  const handleOpenWhatsappReminder = (shop: RetailShop) => {
+    setWhatsappTargetShop(shop);
+    setWhatsappPhone(shop.phone || '');
+    setWhatsappPhoneError('');
+
+    // Fetch unpaid bills for this shop
+    const unpaidInvoices = invoices.filter(
+      (inv) =>
+        inv.shopId === shop.id &&
+        inv.balanceAmount > 0 &&
+        inv.paymentStatus !== 'Cancelled'
+    );
+
+    const invoiceSummaryLines = unpaidInvoices.map(
+      (inv) => `• Bill ${inv.invoiceNumber} (${formatDate(inv.date)}): ₹${inv.balanceAmount.toLocaleString('en-IN')}`
+    );
+
+    const invoiceListText = invoiceSummaryLines.length > 0 ? invoiceSummaryLines.join('\n') : '';
+
+    const defaultTpl =
+      companyInfo.whatsappReminderTemplate ||
+      'Hello [Shop Name], this is a payment reminder from Maayya Future Foods. Your outstanding balance is ₹[Outstanding Amount]. Please review your pending bills and arrange payment when convenient. Thank you.';
+
+    let formatted = defaultTpl
+      .replace(/\[Shop Name\]/g, shop.shopName)
+      .replace(/\[Outstanding Amount\]/g, shop.outstandingAmount.toLocaleString('en-IN'));
+
+    if (invoiceListText) {
+      formatted += `\n\nPending Invoices:\n${invoiceListText}`;
+    }
+
+    if (companyInfo.upiId) {
+      formatted += `\n\nUPI Payment ID: ${companyInfo.upiId}`;
+    }
+
+    setWhatsappMessage(formatted);
+    setIsWhatsappModalOpen(true);
+  };
+
+  const handleSendWhatsapp = () => {
+    const rawPhone = whatsappPhone.trim().replace(/[^\d+]/g, '');
+    let cleanPhone = rawPhone.replace(/\+/g, '');
+
+    // India standard mobile number formatting
+    if (cleanPhone.length === 10) {
+      cleanPhone = `91${cleanPhone}`;
+    }
+
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      setWhatsappPhoneError('Please enter a valid 10-digit mobile number with country code (e.g., +91 98400 12345).');
+      return;
+    }
+
+    setWhatsappPhoneError('');
+    const encodedMsg = encodeURIComponent(whatsappMessage);
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+
+    // Open WhatsApp in a new tab without claiming delivery
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+    addToast({
+      type: 'info',
+      title: 'WhatsApp Launched',
+      message: `Opening WhatsApp chat with ${whatsappTargetShop?.shopName}. Please review and send in WhatsApp.`,
+    });
+
+    setIsWhatsappModalOpen(false);
   };
 
   const handleRecordPaymentSubmit = (e: React.FormEvent) => {
@@ -246,8 +325,16 @@ export const ShopsScreen: React.FC = () => {
       render: (s) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
+            onClick={() => handleOpenWhatsappReminder(s)}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+            title={`Send WhatsApp payment reminder to ${s.shopName}`}
+          >
+            <MessageSquare className="w-3 h-3 text-emerald-600" />
+            <span>Reminder</span>
+          </button>
+          <button
             onClick={() => handleOpenPayment(s)}
-            className="px-2 py-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+            className="px-2 py-1 text-[11px] font-medium text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded transition-colors"
           >
             Receive ₹
           </button>
@@ -346,8 +433,15 @@ export const ShopsScreen: React.FC = () => {
               </button>
               <div className="flex gap-2">
                 <button
+                  onClick={() => handleOpenWhatsappReminder(selectedShop)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded transition-colors"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp Reminder</span>
+                </button>
+                <button
                   onClick={() => handleOpenPayment(selectedShop)}
-                  className="px-3.5 py-1.5 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded transition-colors"
+                  className="px-3.5 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded transition-colors"
                 >
                   Receive Payment (₹)
                 </button>
@@ -710,6 +804,98 @@ export const ShopsScreen: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* WhatsApp Payment Reminder Review & Send Modal */}
+      {isWhatsappModalOpen && whatsappTargetShop && (
+        <Modal
+          isOpen={isWhatsappModalOpen}
+          onClose={() => setIsWhatsappModalOpen(false)}
+          title={`WhatsApp Payment Reminder — ${whatsappTargetShop.shopName}`}
+          subtitle="Review and edit the message before launching WhatsApp. Never sends without your explicit action."
+          maxWidth="lg"
+          footer={
+            <div className="flex items-center justify-between w-full">
+              <span className="text-[11px] text-slate-500">
+                Opens directly in official <strong className="text-emerald-700">WhatsApp</strong> application.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsWhatsappModalOpen(false)}
+                  className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendWhatsapp}
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors shadow-xs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Open WhatsApp & Review</span>
+                  <ExternalLink className="w-3 h-3 ml-0.5" />
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-3.5">
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded text-xs text-emerald-900 flex items-start gap-2.5">
+              <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Owner Review Before Sending</span>
+                <span className="text-[11px] text-emerald-800">
+                  You can personalize the message text or adjust the recipient phone number below. WhatsApp will open with this message prefilled.
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Recipient WhatsApp Phone Number
+              </label>
+              <input
+                type="text"
+                value={whatsappPhone}
+                onChange={(e) => {
+                  setWhatsappPhone(e.target.value);
+                  setWhatsappPhoneError('');
+                }}
+                className={`w-full px-3 py-2 text-xs border rounded font-mono ${
+                  whatsappPhoneError
+                    ? 'border-rose-400 bg-rose-50/30 text-rose-900 focus:ring-rose-500'
+                    : 'border-slate-300 text-slate-900 focus:ring-slate-900'
+                }`}
+                placeholder="+91 98400 12345"
+              />
+              {whatsappPhoneError ? (
+                <p className="text-[11px] text-rose-600 mt-1">{whatsappPhoneError}</p>
+              ) : (
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Stored contact phone for {whatsappTargetShop.ownerName} ({whatsappTargetShop.shopName}).
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Message Content (Editable)
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {whatsappMessage.length} characters
+                </span>
+              </div>
+              <textarea
+                rows={7}
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded font-sans text-slate-800 leading-relaxed focus:outline-none focus:ring-1 focus:ring-slate-900"
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

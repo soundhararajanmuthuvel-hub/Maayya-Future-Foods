@@ -16,21 +16,129 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ invoice, o
 
   if (!invoice) return null;
 
-  const handleSimulatePrint = () => {
+  const handlePrintInvoice = () => {
+    // Add class to body to isolate print view to .invoice-print-sheet
+    document.body.classList.add('printing-invoice');
+    
+    // Trigger browser print dialog
     window.print();
+
+    // Clean up class after dialog closes or prints
+    setTimeout(() => {
+      document.body.classList.remove('printing-invoice');
+    }, 1000);
+
     addToast({
       type: 'info',
-      title: 'Print Command Sent',
-      message: `System print dialog triggered for ${invoice.invoiceNumber}.`,
+      title: 'Print Dialog Opened',
+      message: `System print dialog triggered for ${invoice.invoiceNumber}. Select 'Save as PDF' or physical printer.`,
     });
   };
 
-  const handleSimulatePdf = () => {
-    addToast({
-      type: 'success',
-      title: 'PDF Download Simulated',
-      message: `Generated GST compliant PDF voucher for ${invoice.invoiceNumber}. (Demo)`,
-    });
+  const handleDownloadPdf = () => {
+    try {
+      const invoiceElement = document.getElementById('printable-invoice-content');
+      if (!invoiceElement) {
+        throw new Error('Invoice container element not found.');
+      }
+
+      // Generate a standalone HTML document specifically optimized for A4 download & printing
+      const invoiceHtml = invoiceElement.outerHTML;
+      const printWindow = window.open('', '_blank', 'width=850,height=1000');
+      
+      if (!printWindow) {
+        // Pop-up was blocked, fallback to standard print
+        handlePrintInvoice();
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>Invoice-${invoice.invoiceNumber}</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 12mm 15mm;
+              }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                color: #0f172a;
+                background: #ffffff;
+                margin: 0;
+                padding: 0;
+                font-size: 11pt;
+                line-height: 1.35;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                page-break-inside: auto;
+              }
+              tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+              }
+              th, td {
+                border: 1px solid #cbd5e1;
+                padding: 6px 8px;
+              }
+              th {
+                background-color: #f8fafc;
+                font-weight: 700;
+              }
+              .border { border: 1px solid #e2e8f0; }
+              .border-b { border-bottom: 1px solid #cbd5e1; }
+              .border-t { border-top: 1px solid #cbd5e1; }
+              .p-4 { padding: 1rem; }
+              .p-6 { padding: 1.5rem; }
+              .mb-4 { margin-bottom: 1rem; }
+              .mt-4 { margin-top: 1rem; }
+              .text-right { text-align: right; }
+              .text-center { text-align: center; }
+              .font-bold { font-weight: bold; }
+              .font-semibold { font-weight: 600; }
+              .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+              .flex { display: flex; }
+              .justify-between { justify-content: space-between; }
+              .items-center { align-items: center; }
+              .items-start { align-items: flex-start; }
+              .gap-4 { gap: 1rem; }
+              .grid { display: grid; }
+              .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+              img { max-width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            ${invoiceHtml}
+            <script>
+              window.onload = function() {
+                window.focus();
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      addToast({
+        type: 'success',
+        title: 'Invoice PDF Ready',
+        message: `Opening high-resolution A4 print document for ${invoice.invoiceNumber}. Click 'Save as PDF' to download.`,
+      });
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'PDF Generation Failed',
+        message: err?.message || 'Could not prepare invoice document.',
+      });
+    }
   };
 
   return (
@@ -43,15 +151,17 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ invoice, o
       footer={
         <>
           <button
-            onClick={handleSimulatePdf}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors"
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-2xs"
+            title="Download high-resolution A4 PDF"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download PDF</span>
           </button>
           <button
-            onClick={handleSimulatePrint}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors"
+            onClick={handlePrintInvoice}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors shadow-xs"
+            title="Open browser print dialog"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Invoice</span>
@@ -61,7 +171,10 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ invoice, o
     >
       {/* Printable Invoice Sheet with Mobile Scroll Protection */}
       <div className="overflow-x-auto -mx-3 sm:mx-0 p-1">
-        <div className="bg-white border border-slate-300 p-4 sm:p-6 rounded text-slate-800 font-sans text-xs print:p-0 print:border-none min-w-[560px] sm:min-w-full">
+        <div
+          id="printable-invoice-content"
+          className="invoice-print-sheet bg-white border border-slate-300 p-4 sm:p-6 rounded text-slate-800 font-sans text-xs print:p-0 print:border-none min-w-[560px] sm:min-w-full"
+        >
         {/* Dynamic Brand Logos at Top of Invoice (Heritage / Hangyo / Mixed / Future Brands) */}
         <div className="pb-3 mb-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <InvoiceBrandLogos

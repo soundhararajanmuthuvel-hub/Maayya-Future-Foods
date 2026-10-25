@@ -38,6 +38,7 @@ export interface CompanyInfo {
   accountNumber?: string;
   ifscCode?: string;
   upiId?: string;
+  whatsappReminderTemplate?: string;
 }
 
 export type ProductCategory = 

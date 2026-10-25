@@ -97,7 +97,7 @@ export const SettingsScreen: React.FC = () => {
   }, []);
 
   const [activeTab, setActiveTab] = useState<
-    'pwa' | 'brands' | 'company' | 'gst' | 'coldchain' | 'backup' | 'audit' | 'checklist' | 'about'
+    'pwa' | 'brands' | 'company' | 'gst' | 'inventory' | 'backup' | 'audit' | 'checklist' | 'about'
   >('pwa');
 
   // Company Profile Form State initialized from AppContext
@@ -326,7 +326,7 @@ export const SettingsScreen: React.FC = () => {
             { id: 'brands', label: 'Brand Management' },
             { id: 'company', label: 'Company Profile & Bank' },
             { id: 'gst', label: 'GST & Invoice Series' },
-            { id: 'coldchain', label: 'Inventory & Expiry Alerts' },
+            { id: 'inventory', label: 'Inventory & Expiry Alerts' },
             { id: 'backup', label: 'Backup & Restore Engine' },
             { id: 'audit', label: 'System Audit Log' },
             { id: 'checklist', label: 'Desktop Phase Checklist' },
@@ -1156,6 +1156,27 @@ export const SettingsScreen: React.FC = () => {
               </div>
             </div>
           </div>
+
+          <div className="pt-3 border-t border-slate-200">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              WhatsApp Payment Reminder Template
+            </h4>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Default message template used when sending reminders to retail shops. Variables like <code className="text-sky-700">[Shop Name]</code>, <code className="text-sky-700">[Outstanding Amount]</code>, and <code className="text-sky-700">[Invoices List]</code> will be automatically replaced with live data.
+            </p>
+            <textarea
+              rows={3}
+              value={
+                companyForm.whatsappReminderTemplate ??
+                'Hello [Shop Name], this is a payment reminder from Maayya Future Foods. Your outstanding balance is ₹[Outstanding Amount]. Please review your pending bills and arrange payment when convenient. Thank you.'
+              }
+              onChange={(e) =>
+                setCompanyForm({ ...companyForm, whatsappReminderTemplate: e.target.value })
+              }
+              className="w-full px-2.5 py-2 border border-slate-300 rounded text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900"
+              placeholder="Hello [Shop Name], this is a payment reminder from Maayya Future Foods..."
+            />
+          </div>
         </form>
       )}
 
@@ -1231,7 +1252,7 @@ export const SettingsScreen: React.FC = () => {
       )}
 
       {/* TAB 3: Inventory & Expiry Alerts */}
-      {activeTab === 'coldchain' && (
+      {activeTab === 'inventory' && (
         <div className="bg-white border border-slate-200/90 rounded-lg p-5 space-y-4 max-w-2xl text-xs">
           <div className="pb-3 border-b border-slate-200">
             <h3 className="text-sm font-bold text-slate-900">Inventory & Batch Expiry Alert Parameters</h3>

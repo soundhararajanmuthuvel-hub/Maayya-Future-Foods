@@ -488,7 +488,7 @@ export const ProductsScreen: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title={editingProduct ? `Edit ${editingProduct.name}` : 'Add New Product to Catalog'}
-        subtitle="Catalog master for multi-brand cold storage inventory"
+        subtitle="Catalog master for multi-brand inventory"
         maxWidth="xl"
       >
         <form onSubmit={handleSaveProduct} className="space-y-4">

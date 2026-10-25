@@ -206,22 +206,22 @@ export const TopBar: React.FC = () => {
           <span className="hidden md:inline">About</span>
         </button>
 
-        {/* User Desk Profile & Security Terminal Trigger */}
+        {/* Owner Profile & Terminal Security Lock Trigger */}
         <button
           onClick={() => setIsLoginModalOpen(true)}
           className="flex items-center gap-2 pl-2 border-l border-slate-200 hover:opacity-90 transition-opacity text-left"
-          title="Terminal Access & Security Lock"
+          title="Owner Security Lock & Workspace Status"
         >
           <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-1 ring-slate-800">
-            M
+            K
           </div>
           <div className="hidden lg:block text-left text-xs leading-none">
             <div className="font-semibold text-slate-900 flex items-center gap-1">
-              <span>Rajesh Kumar</span>
+              <span>Kalai</span>
               <Lock className="w-2.5 h-2.5 text-slate-400" />
             </div>
-            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-              Client: {companyInfo.name}
+            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+              Owner · {companyInfo.name}
             </div>
           </div>
         </button>

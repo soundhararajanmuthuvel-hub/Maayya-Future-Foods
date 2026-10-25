@@ -420,7 +420,7 @@ export const ReportsScreen: React.FC = () => {
         <div className="bg-white border border-slate-200/90 rounded-lg p-4 space-y-3">
           <div className="flex justify-between items-center">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-              Cold Storage Inventory Valuation by Chamber & Brand
+              Central Warehouse Inventory Valuation by Category & Brand
             </h3>
             <span className="font-mono font-bold text-sm text-slate-900">
               Total Assets: {formatINR(products.reduce((s, p) => s + p.currentStock * p.purchaseRate, 0))}
