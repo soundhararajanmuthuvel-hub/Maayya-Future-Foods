@@ -77,7 +77,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <div className="flex flex-col items-center text-center">
             <MsrLogo variant="hero" theme="dark" />
             <div className="mt-3 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-[11px] font-mono text-sky-400">
-              Enterprise Authentication Portal
+              Terminal Access & Security Lock
             </div>
           </div>
         </div>

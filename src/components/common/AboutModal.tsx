@@ -71,7 +71,11 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           )}
 
           <div className="p-3.5 bg-white space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-900">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+              <span className="text-slate-500">Application Type:</span>
+              <span className="font-semibold text-slate-900">{APP_CONFIG.applicationType}</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-semibold text-slate-900 pt-1">
               <Layers className="w-4 h-4 text-indigo-600" />
               <span>Deployment Architecture</span>
             </div>

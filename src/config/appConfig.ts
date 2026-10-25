@@ -29,6 +29,7 @@ export interface DeploymentStackConfig {
 export interface AppMetadataConfig {
   productName: string;
   shortDescription: string;
+  applicationType: string;
   stack: DeploymentStackConfig;
   client: OrganizationEntityConfig;
   developer: DeveloperEntityConfig;
@@ -38,6 +39,7 @@ export const APP_CONFIG: AppMetadataConfig = {
   productName: 'Maayya Future Foods — Smart Business Manager',
   shortDescription:
     'A business management application designed for billing, inventory, purchases, retail shop outstanding balances, expenses, and financial reports.',
+  applicationType: 'Single-user web application',
   stack: {
     frontend: 'Vercel',
     backend: 'Render',

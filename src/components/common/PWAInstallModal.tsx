@@ -252,7 +252,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
         {/* Modal Footer */}
         <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
           <span className="text-[11px] text-slate-500 font-medium">
-            MSR Solutions Enterprise PWA Architecture
+            Smart Business Manager PWA
           </span>
           <button
             onClick={onClose}

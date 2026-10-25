@@ -1336,6 +1336,10 @@ export const SettingsScreen: React.FC = () => {
                   <span className="font-semibold text-sky-700">MSR Solutions</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Application Type:</span>
+                  <span className="font-medium text-slate-900">Single-User Web Application</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Frontend Hosting:</span>
                   <span className="font-medium text-slate-900">Vercel</span>
                 </div>

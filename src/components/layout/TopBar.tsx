@@ -206,11 +206,11 @@ export const TopBar: React.FC = () => {
           <span className="hidden md:inline">About</span>
         </button>
 
-        {/* User Desk Profile & Switch Operator Trigger */}
+        {/* User Desk Profile & Security Terminal Trigger */}
         <button
           onClick={() => setIsLoginModalOpen(true)}
           className="flex items-center gap-2 pl-2 border-l border-slate-200 hover:opacity-90 transition-opacity text-left"
-          title="Click to Switch Operator / Lock Terminal"
+          title="Terminal Access & Security Lock"
         >
           <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-1 ring-slate-800">
             M
