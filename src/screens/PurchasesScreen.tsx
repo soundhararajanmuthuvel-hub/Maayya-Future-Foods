@@ -304,7 +304,7 @@ export const PurchasesScreen: React.FC = () => {
         searchFilter={(pb, q) =>
           pb.billNumber.toLowerCase().includes(q) ||
           pb.supplierName.toLowerCase().includes(q) ||
-          pb.supplierGstin.toLowerCase().includes(q)
+          (pb.supplierGstin?.toLowerCase() || '').includes(q)
         }
         onRowClick={(pb) => setSelectedPurchaseId(pb.id)}
         actions={

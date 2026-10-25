@@ -184,7 +184,7 @@ export interface PurchaseBill {
   billNumber: string;
   supplierId: string;
   supplierName: string;
-  supplierGstin: string;
+  supplierGstin?: string;
   billDate: string;
   receivedDate: string;
   status: 'Posted' | 'Draft' | 'Returned';
