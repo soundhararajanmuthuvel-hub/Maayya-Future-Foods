@@ -14,6 +14,8 @@ import {
   Filter,
   CheckCircle,
   AlertTriangle,
+  Trash2,
+  RotateCw,
 } from 'lucide-react';
 
 export const InvoicesScreen: React.FC = () => {
@@ -23,6 +25,7 @@ export const InvoicesScreen: React.FC = () => {
     setSelectedInvoiceId,
     setPrintableInvoice,
     cancelInvoice,
+    reloadWorkspaceFromBackend,
     addToast,
   } = useApp();
 
@@ -31,6 +34,7 @@ export const InvoicesScreen: React.FC = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancellingInvoice, setCancellingInvoice] = useState<Invoice | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Filter invoices
   const filteredInvoices = invoices.filter((inv) => {
@@ -45,13 +49,18 @@ export const InvoicesScreen: React.FC = () => {
     setIsCancelModalOpen(true);
   };
 
-  const handleConfirmCancel = (e: React.FormEvent) => {
+  const handleConfirmCancel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cancellingInvoice || !cancelReason.trim()) return;
 
-    cancelInvoice(cancellingInvoice.id, cancelReason);
-    setIsCancelModalOpen(false);
-    setCancellingInvoice(null);
+    setIsCancelling(true);
+    try {
+      await cancelInvoice(cancellingInvoice.id, cancelReason);
+      setIsCancelModalOpen(false);
+      setCancellingInvoice(null);
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const columns: Column<Invoice>[] = [
@@ -158,9 +167,10 @@ export const InvoicesScreen: React.FC = () => {
             <button
               onClick={() => handleOpenCancel(inv)}
               className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-              title="Cancel Invoice & Reversal Entry"
+              title="Void / Cancel Invoice & Reverse Stock"
+              aria-label={`Void invoice ${inv.invoiceNumber}`}
             >
-              <Ban className="w-3.5 h-3.5" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -264,16 +274,19 @@ export const InvoicesScreen: React.FC = () => {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
+                disabled={isCancelling}
                 onClick={() => setIsCancelModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50"
               >
                 Abort
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded transition-colors"
+                disabled={isCancelling}
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
-                Confirm Cancellation & Reverse Stock
+                {isCancelling ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{isCancelling ? 'Processing Reversal...' : 'Confirm Cancellation & Reverse Stock'}</span>
               </button>
             </div>
           </form>

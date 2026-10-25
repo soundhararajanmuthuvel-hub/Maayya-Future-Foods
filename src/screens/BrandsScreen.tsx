@@ -5,6 +5,7 @@ import { formatDate } from '../utils/formatters';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
+import { ConfirmDeleteModal } from '../components/common/ConfirmDeleteModal';
 import {
   Tag,
   Plus,
@@ -28,6 +29,8 @@ export const BrandsScreen: React.FC = () => {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [deactivatingBrand, setDeactivatingBrand] = useState<Brand | null>(null);
+  const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
   // Form State
   const [brandForm, setBrandForm] = useState({
@@ -269,7 +272,7 @@ export const BrandsScreen: React.FC = () => {
           </button>
           {!b.isInitial && (
             <button
-              onClick={() => deleteBrand(b.id)}
+              onClick={() => setDeletingBrand(b)}
               className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-rose-200 rounded"
               title="Delete Brand"
             >
@@ -531,6 +534,29 @@ export const BrandsScreen: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Brand Delete Confirmation Modal */}
+      {deletingBrand && (
+        <ConfirmDeleteModal
+          isOpen={!!deletingBrand}
+          onClose={() => setDeletingBrand(null)}
+          title="Delete Brand"
+          recordType="Brand"
+          recordName={deletingBrand.name}
+          details={`Are you sure you want to delete brand "${deletingBrand.name}"? If products or past invoices reference this brand, the system will protect historical records.`}
+          confirmButtonLabel="Delete Brand"
+          isProcessing={isDeleteProcessing}
+          onConfirm={async () => {
+            setIsDeleteProcessing(true);
+            try {
+              deleteBrand(deletingBrand.id);
+              setDeletingBrand(null);
+            } finally {
+              setIsDeleteProcessing(false);
+            }
+          }}
+        />
       )}
     </div>
   );

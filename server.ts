@@ -728,6 +728,129 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
+app.delete('/api/products/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ success: false, error: 'Product ID is required.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Check if product exists
+    const prodRes = await client.query('SELECT id, name, code FROM products WHERE id = $1;', [id]);
+    if (prodRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ success: false, error: 'Product not found.' });
+      return;
+    }
+    const product = prodRes.rows[0];
+
+    // 2. Check if product is referenced in any invoices
+    const invRes = await client.query(
+      `SELECT id, invoice_number FROM invoices WHERE items::text LIKE $1 LIMIT 5;`,
+      [`%"productId":"${id}"%`]
+    );
+
+    // 3. Check if product is referenced in any purchase bills
+    const purRes = await client.query(
+      `SELECT id, bill_number FROM purchases WHERE items::text LIKE $1 LIMIT 5;`,
+      [`%"productId":"${id}"%`]
+    );
+
+    // If product has transaction history, safeguard financial integrity by archiving / deactivating
+    if (invRes.rows.length > 0 || purRes.rows.length > 0) {
+      await client.query(
+        'UPDATE products SET is_active = FALSE, updated_at = NOW() WHERE id = $1;',
+        [id]
+      );
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        archived: true,
+        message: `Product "${product.name}" has ${invRes.rows.length} invoice(s) or purchase(s) on record. It has been safely deactivated & archived to preserve historical financial records.`,
+      });
+      return;
+    }
+
+    // 4. If completely unreferenced, perform clean deletion
+    await client.query('DELETE FROM stock_adjustments WHERE product_id = $1;', [id]);
+    await client.query('DELETE FROM products WHERE id = $1;', [id]);
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      archived: false,
+      message: `Product "${product.name}" (${product.code}) permanently deleted from PostgreSQL.`,
+    });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting product from PostgreSQL:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/api/products/batch-delete', async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ success: false, error: 'IDs array is required for batch delete.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let deletedCount = 0;
+    let skippedCount = 0;
+    const skippedNames: string[] = [];
+
+    for (const id of ids) {
+      const prodRes = await client.query('SELECT id, name FROM products WHERE id = $1;', [id]);
+      if (prodRes.rows.length === 0) continue;
+      const product = prodRes.rows[0];
+
+      // Check transaction dependency
+      const invRes = await client.query(
+        `SELECT id FROM invoices WHERE items::text LIKE $1 LIMIT 1;`,
+        [`%"productId":"${id}"%`]
+      );
+      const purRes = await client.query(
+        `SELECT id FROM purchases WHERE items::text LIKE $1 LIMIT 1;`,
+        [`%"productId":"${id}"%`]
+      );
+
+      if (invRes.rows.length > 0 || purRes.rows.length > 0) {
+        // Safe archive
+        await client.query('UPDATE products SET is_active = FALSE, updated_at = NOW() WHERE id = $1;', [id]);
+        skippedCount++;
+        skippedNames.push(`${product.name} (Archived due to transaction history)`);
+      } else {
+        await client.query('DELETE FROM stock_adjustments WHERE product_id = $1;', [id]);
+        await client.query('DELETE FROM products WHERE id = $1;', [id]);
+        deletedCount++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      success: true,
+      deletedCount,
+      skippedCount,
+      skipped: skippedNames,
+      message: `Processed ${ids.length} products: ${deletedCount} deleted, ${skippedCount} archived.`,
+    });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ success: false, error: err?.message || 'Database error during batch delete' });
+  } finally {
+    client.release();
+  }
+});
+
 // ==========================================
 // 6. Retail Shops (Customers) CRUD
 // ==========================================
@@ -782,6 +905,69 @@ app.post('/api/shops', async (req, res) => {
   } catch (err: any) {
     console.error('Error saving shop to PostgreSQL:', err);
     res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  }
+});
+
+app.delete('/api/shops/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ success: false, error: 'Shop ID is required.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const shopRes = await client.query('SELECT id, shop_name, outstanding_amount FROM retail_shops WHERE id = $1;', [id]);
+    if (shopRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ success: false, error: 'Retail shop not found.' });
+      return;
+    }
+    const shop = shopRes.rows[0];
+
+    // Check outstanding balance
+    if (parseFloat(shop.outstanding_amount || '0') > 0) {
+      await client.query('ROLLBACK');
+      res.status(400).json({
+        success: false,
+        error: `Cannot delete "${shop.shop_name}" while an outstanding balance of ₹${parseFloat(shop.outstanding_amount).toLocaleString('en-IN')} remains. Collect or write off dues first.`,
+      });
+      return;
+    }
+
+    // Check if shop has linked invoices or payments
+    const invRes = await client.query('SELECT id FROM invoices WHERE shop_id = $1 LIMIT 1;', [id]);
+    const payRes = await client.query('SELECT id FROM shop_payments WHERE shop_id = $1 LIMIT 1;', [id]);
+
+    if (invRes.rows.length > 0 || payRes.rows.length > 0) {
+      // Archive/Block instead of deleting historical financial link
+      await client.query("UPDATE retail_shops SET status = 'Blocked', updated_at = NOW() WHERE id = $1;", [id]);
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        archived: true,
+        message: `"${shop.shop_name}" has past invoices/payments on record. It has been deactivated & blocked from new billing to preserve audit history.`,
+      });
+      return;
+    }
+
+    // Clean delete if no transaction history
+    await client.query('DELETE FROM retail_shops WHERE id = $1;', [id]);
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      archived: false,
+      message: `Retail shop "${shop.shop_name}" deleted from PostgreSQL database.`,
+    });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting shop from PostgreSQL:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -850,6 +1036,67 @@ app.post('/api/suppliers', async (req, res) => {
   } catch (err: any) {
     console.error('Error saving supplier to PostgreSQL:', err);
     res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  }
+});
+
+app.delete('/api/suppliers/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ success: false, error: 'Supplier ID is required.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const supRes = await client.query('SELECT id, name, outstanding_payable FROM suppliers WHERE id = $1;', [id]);
+    if (supRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ success: false, error: 'Supplier not found.' });
+      return;
+    }
+    const supplier = supRes.rows[0];
+
+    // Check outstanding payable
+    if (parseFloat(supplier.outstanding_payable || '0') > 0) {
+      await client.query('ROLLBACK');
+      res.status(400).json({
+        success: false,
+        error: `Cannot delete supplier "${supplier.name}" while an outstanding payable of ₹${parseFloat(supplier.outstanding_payable).toLocaleString('en-IN')} remains. Settle dues first.`,
+      });
+      return;
+    }
+
+    // Check if supplier has linked purchases or payments
+    const purRes = await client.query('SELECT id FROM purchases WHERE supplier_id = $1 LIMIT 1;', [id]);
+    const payRes = await client.query('SELECT id FROM supplier_payments WHERE supplier_id = $1 LIMIT 1;', [id]);
+
+    if (purRes.rows.length > 0 || payRes.rows.length > 0) {
+      await client.query("UPDATE suppliers SET status = 'Inactive', updated_at = NOW() WHERE id = $1;", [id]);
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        archived: true,
+        message: `"${supplier.name}" has purchase history on record. It has been marked Inactive to preserve financial ledgers.`,
+      });
+      return;
+    }
+
+    await client.query('DELETE FROM suppliers WHERE id = $1;', [id]);
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      archived: false,
+      message: `Supplier "${supplier.name}" permanently deleted from PostgreSQL.`,
+    });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting supplier from PostgreSQL:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -965,6 +1212,113 @@ app.post('/api/invoices', async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Invoice creation transaction failed:', err);
     res.status(500).json({ success: false, error: err?.message || 'Transaction error' });
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/api/invoices/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!id) {
+    res.status(400).json({ success: false, error: 'Invoice ID is required.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Fetch invoice
+    const invRes = await client.query('SELECT * FROM invoices WHERE id = $1 FOR UPDATE;', [id]);
+    if (invRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ success: false, error: 'Invoice not found.' });
+      return;
+    }
+    const inv = invRes.rows[0];
+
+    if (inv.payment_status === 'Cancelled') {
+      await client.query('ROLLBACK');
+      res.status(400).json({ success: false, error: 'Invoice is already cancelled.' });
+      return;
+    }
+
+    // 2. Return inventory to stock and batch allocations
+    const items = typeof inv.items === 'string' ? JSON.parse(inv.items) : (inv.items || []);
+    for (const item of items) {
+      if (item.productId && item.qty > 0) {
+        const prodRes = await client.query('SELECT current_stock, batches FROM products WHERE id = $1 FOR UPDATE;', [
+          item.productId,
+        ]);
+        if (prodRes.rows.length > 0) {
+          const currentStock = parseFloat(prodRes.rows[0].current_stock || '0');
+          const newStock = currentStock + parseFloat(item.qty);
+          let batches = prodRes.rows[0].batches || [];
+
+          if (Array.isArray(batches) && item.batchNumber) {
+            batches = batches.map((b: any) =>
+              b.batchNumber === item.batchNumber
+                ? { ...b, quantity: parseFloat(b.quantity || '0') + parseFloat(item.qty) }
+                : b
+            );
+          }
+
+          await client.query('UPDATE products SET current_stock = $1, batches = $2 WHERE id = $3;', [
+            newStock,
+            JSON.stringify(batches),
+            item.productId,
+          ]);
+        }
+      }
+    }
+
+    // 3. Reverse shop outstanding if balance was unpaid
+    const balanceAmount = parseFloat(inv.balance_amount || '0');
+    if (inv.shop_id && balanceAmount > 0) {
+      await client.query(
+        `UPDATE retail_shops
+         SET outstanding_amount = GREATEST(0, outstanding_amount - $1)
+         WHERE id = $2;`,
+        [balanceAmount, inv.shop_id]
+      );
+    }
+
+    // 4. Reverse cash drawer if it was a cash sale
+    const paidAmount = parseFloat(inv.paid_amount || '0');
+    if (inv.payment_mode === 'Cash' && paidAmount > 0) {
+      await client.query(
+        `INSERT INTO daily_cash (date, cash_sales, expected_cash_in_drawer, physical_count_cash)
+         VALUES ($1, -$2, -$2, -$2)
+         ON CONFLICT (date) DO UPDATE
+         SET cash_sales = daily_cash.cash_sales - EXCLUDED.cash_sales,
+             expected_cash_in_drawer = daily_cash.expected_cash_in_drawer - EXCLUDED.cash_sales,
+             physical_count_cash = daily_cash.physical_count_cash - EXCLUDED.cash_sales;`,
+        [inv.date, paidAmount]
+      );
+    }
+
+    // 5. Update invoice status to Cancelled with reason and timestamp
+    await client.query(
+      `UPDATE invoices
+       SET payment_status = 'Cancelled',
+           cancellation_reason = $1,
+           cancelled_at = NOW(),
+           cancelled_by = 'Owner / Authorized Desk'
+       WHERE id = $2;`,
+      [reason || 'Voided by authorized manager', id]
+    );
+
+    await client.query('COMMIT');
+    res.json({
+      success: true,
+      message: `Invoice ${inv.invoice_number} voided and reversed. Stock returned to cold storage.`,
+    });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Invoice cancellation error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
   } finally {
     client.release();
   }
@@ -1123,6 +1477,62 @@ app.post('/api/expenses', async (req, res) => {
     res.json({ success: true, message: 'Expense recorded in PostgreSQL.' });
   } catch (err: any) {
     console.error('Expense error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  }
+});
+
+app.delete('/api/expenses/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ success: false, error: 'Expense ID is required.' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const expRes = await client.query('SELECT * FROM expenses WHERE id = $1 FOR UPDATE;', [id]);
+    if (expRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ success: false, error: 'Expense voucher not found.' });
+      return;
+    }
+    const exp = expRes.rows[0];
+
+    // If it was a cash expense, reverse cash in daily cash record
+    if (exp.payment_mode === 'Cash') {
+      const amt = parseFloat(exp.amount || '0');
+      await client.query(
+        `INSERT INTO daily_cash (date, cash_expenses, expected_cash_in_drawer, physical_count_cash)
+         VALUES ($1, -$2, $2, $2)
+         ON CONFLICT (date) DO UPDATE
+         SET cash_expenses = GREATEST(0, daily_cash.cash_expenses - EXCLUDED.cash_expenses),
+             expected_cash_in_drawer = daily_cash.expected_cash_in_drawer + EXCLUDED.cash_expenses,
+             physical_count_cash = daily_cash.physical_count_cash + EXCLUDED.cash_expenses;`,
+        [exp.date, amt]
+      );
+    }
+
+    await client.query('DELETE FROM expenses WHERE id = $1;', [id]);
+    await client.query('COMMIT');
+
+    res.json({ success: true, message: `Expense voucher ${exp.voucher_no} removed from PostgreSQL.` });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting expense:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Database error' });
+  } finally {
+    client.release();
+  }
+});
+
+app.delete('/api/notifications/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM notifications WHERE id = $1;', [id]);
+    res.json({ success: true, message: 'Notification removed.' });
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Database error' });
   }
 });

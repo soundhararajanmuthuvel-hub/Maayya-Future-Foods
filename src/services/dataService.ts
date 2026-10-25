@@ -235,3 +235,109 @@ export async function saveCompanyInfoToBackend(info: CompanyInfo): Promise<{ suc
     return { success: false, error: err?.message || 'Network error saving company info.' };
   }
 }
+
+/**
+ * Deletes or archives a product in PostgreSQL
+ */
+export async function deleteProductFromBackend(id: string): Promise<{ success: boolean; error?: string; archived?: boolean; message?: string }> {
+  const url = buildApiUrl(`/api/products/${id}`);
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error, archived: json.archived, message: json.message };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error deleting product.' };
+  }
+}
+
+/**
+ * Deletes or deactivates a retail shop in PostgreSQL
+ */
+export async function deleteShopFromBackend(id: string): Promise<{ success: boolean; error?: string; archived?: boolean; message?: string }> {
+  const url = buildApiUrl(`/api/shops/${id}`);
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error, archived: json.archived, message: json.message };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error deleting shop.' };
+  }
+}
+
+/**
+ * Deletes or deactivates a supplier in PostgreSQL
+ */
+export async function deleteSupplierFromBackend(id: string): Promise<{ success: boolean; error?: string; archived?: boolean; message?: string }> {
+  const url = buildApiUrl(`/api/suppliers/${id}`);
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error, archived: json.archived, message: json.message };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error deleting supplier.' };
+  }
+}
+
+/**
+ * Deletes an expense voucher from PostgreSQL
+ */
+export async function deleteExpenseFromBackend(id: string): Promise<{ success: boolean; error?: string }> {
+  const url = buildApiUrl(`/api/expenses/${id}`);
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error deleting expense.' };
+  }
+}
+
+/**
+ * Deletes a notification from PostgreSQL
+ */
+export async function deleteNotificationFromBackend(id: string): Promise<{ success: boolean; error?: string }> {
+  const url = buildApiUrl(`/api/notifications/${id}`);
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error deleting notification.' };
+  }
+}
+
+/**
+ * Cancels / Voids an invoice on PostgreSQL with stock and ledger reversals
+ */
+export async function cancelInvoiceOnBackend(id: string, reason: string): Promise<{ success: boolean; error?: string }> {
+  const url = buildApiUrl(`/api/invoices/${id}/cancel`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const json = await res.json();
+    return { success: res.ok && json.success, error: json.error };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error cancelling invoice.' };
+  }
+}
+
+/**
+ * Bulk deletes products safely from backend
+ */
+export async function bulkDeleteProductsFromBackend(ids: string[]): Promise<{ success: boolean; deletedCount?: number; skippedCount?: number; skipped?: string[]; error?: string }> {
+  const url = buildApiUrl('/api/products/batch-delete');
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    const json = await res.json();
+    return { success: res.ok && json.success, deletedCount: json.deletedCount, skippedCount: json.skippedCount, skipped: json.skipped, error: json.error };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error bulk deleting products.' };
+  }
+}

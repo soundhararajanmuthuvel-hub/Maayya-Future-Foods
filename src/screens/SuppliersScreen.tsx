@@ -22,6 +22,7 @@ import {
   Receipt,
   FileText,
 } from 'lucide-react';
+import { ConfirmDeleteModal } from '../components/common/ConfirmDeleteModal';
 
 export const SuppliersScreen: React.FC = () => {
   const {
@@ -43,6 +44,8 @@ export const SuppliersScreen: React.FC = () => {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payTargetSupplier, setPayTargetSupplier] = useState<Supplier | null>(null);
   const [deactivatingSupplier, setDeactivatingSupplier] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
 
   // Status Filter
@@ -306,15 +309,13 @@ export const SuppliersScreen: React.FC = () => {
           >
             {(s.status || 'Active') === 'Active' ? 'Deactivate' : 'Activate'}
           </button>
-          {purchases.filter((p) => p.supplierId === s.id).length === 0 && s.outstandingPayable === 0 && (
-            <button
-              onClick={() => deleteSupplier(s.id)}
-              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded"
-              title="Delete Supplier"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            onClick={() => setSupplierToDelete(s)}
+            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+            title={`Delete ${s.name}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       ),
     },
@@ -1006,6 +1007,29 @@ export const SuppliersScreen: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Confirm Delete Supplier Modal */}
+      {supplierToDelete && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(supplierToDelete)}
+          onClose={() => setSupplierToDelete(null)}
+          title="Delete Supplier"
+          recordType="Supplier"
+          recordName={`${supplierToDelete.name} (${supplierToDelete.code})`}
+          details={`Contact: ${supplierToDelete.contactPerson} · City: ${supplierToDelete.city} · Outstanding Payable: ${formatINR(supplierToDelete.outstandingPayable)}`}
+          warningNote="If this supplier has inward purchase bills or payment vouchers on record, it will be safely deactivated to preserve accounting ledgers."
+          isProcessing={isDeleting}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              deleteSupplier(supplierToDelete.id);
+              setSupplierToDelete(null);
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+        />
       )}
     </div>
   );

@@ -39,15 +39,22 @@ import {
 import {
   fetchWorkspaceData,
   saveProductToBackend,
+  deleteProductFromBackend,
+  bulkDeleteProductsFromBackend,
   saveShopToBackend,
+  deleteShopFromBackend,
   saveSupplierToBackend,
+  deleteSupplierFromBackend,
   saveInvoiceToBackend,
+  cancelInvoiceOnBackend,
   savePurchaseToBackend,
   saveExpenseToBackend,
+  deleteExpenseFromBackend,
   saveShopPaymentToBackend,
   saveBrandToBackend,
   deleteBrandFromBackend,
   saveCompanyInfoToBackend,
+  deleteNotificationFromBackend,
 } from '../services/dataService';
 
 export type ScreenId =
@@ -166,8 +173,12 @@ interface AppContextType {
   closeDailyCash: (physicalCount: number, notes: string) => void;
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
+  deleteProduct: (productId: string) => Promise<{ success: boolean; error?: string; archived?: boolean }>;
+  bulkDeleteProducts: (productIds: string[]) => Promise<{ success: boolean; deletedCount?: number; skippedCount?: number; skipped?: string[]; error?: string }>;
   addShop: (shop: Omit<RetailShop, 'id' | 'code'>) => void;
   updateShop: (shop: RetailShop) => void;
+  deleteShop: (shopId: string) => Promise<{ success: boolean; error?: string; archived?: boolean }>;
+  deleteExpense: (expenseId: string) => Promise<{ success: boolean; error?: string }>;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => void;
   updateSupplier: (supplier: Supplier) => void;
   deleteSupplier: (supplierId: string) => void;
@@ -347,6 +358,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteNotificationFromBackend(id).catch(() => {});
   };
 
   const addNotification = (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -558,10 +570,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Reversed ${inv.invoiceNumber} (${inv.shopName}). Reason: ${reason}. Stock returned.`
     );
 
-    addToast({
-      type: 'warning',
-      title: `${inv.invoiceNumber} Cancelled & Reversed`,
-      message: `Audit reversal recorded. Inventory returned to cold storage. (Demo simulation)`,
+    cancelInvoiceOnBackend(invoiceId, reason).then((res) => {
+      if (res.success) {
+        addToast({
+          type: 'warning',
+          title: `${inv.invoiceNumber} Cancelled & Reversed`,
+          message: `Audit reversal committed to Render PostgreSQL. Inventory returned to cold storage.`,
+        });
+        reloadWorkspaceFromBackend();
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Cancellation Error',
+          message: res.error || 'Failed to void invoice on PostgreSQL.',
+        });
+      }
     });
   };
 
@@ -969,6 +992,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const deleteProduct = async (productId: string): Promise<{ success: boolean; error?: string; archived?: boolean }> => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return { success: false, error: 'Product not found.' };
+
+    try {
+      const res = await deleteProductFromBackend(productId);
+      if (res.success) {
+        if (res.archived) {
+          setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, isActive: false } : p)));
+          logAudit('Product Archived', 'Catalog', `Deactivated ${prod.name} (${prod.code}) due to transaction history.`);
+          addToast({
+            type: 'warning',
+            title: 'Product Archived',
+            message: res.message || `${prod.name} archived to preserve historical invoices & purchases.`,
+          });
+        } else {
+          setProducts((prev) => prev.filter((p) => p.id !== productId));
+          logAudit('Product Deleted', 'Catalog', `Permanently deleted ${prod.name} (${prod.code})`);
+          addToast({
+            type: 'success',
+            title: 'Product Deleted',
+            message: `${prod.name} permanently deleted from PostgreSQL database.`,
+          });
+        }
+        await reloadWorkspaceFromBackend();
+        return { success: true, archived: res.archived };
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Deletion Failed',
+          message: res.error || `Could not delete ${prod.name}.`,
+        });
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Network Error',
+        message: err?.message || 'Failed to connect to backend server.',
+      });
+      return { success: false, error: err?.message };
+    }
+  };
+
+  const bulkDeleteProducts = async (productIds: string[]): Promise<{ success: boolean; deletedCount?: number; skippedCount?: number; skipped?: string[]; error?: string }> => {
+    if (!productIds.length) return { success: false, error: 'No products selected.' };
+    try {
+      const res = await bulkDeleteProductsFromBackend(productIds);
+      if (res.success) {
+        addToast({
+          type: 'success',
+          title: 'Bulk Deletion Complete',
+          message: `Deleted ${res.deletedCount || 0} product(s), archived ${res.skippedCount || 0} product(s) with transaction history.`,
+        });
+        await reloadWorkspaceFromBackend();
+        return { success: true, deletedCount: res.deletedCount, skippedCount: res.skippedCount, skipped: res.skipped };
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Bulk Deletion Failed',
+          message: res.error || 'Failed to process bulk deletion.',
+        });
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error' };
+    }
+  };
+
   // 11. Add/Edit Shop
   const addShop = (shopData: Omit<RetailShop, 'id' | 'code'>) => {
     const code = `SH-${Math.floor(100 + Math.random() * 900)}`;
@@ -1016,6 +1108,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
     });
+  };
+
+  const deleteShop = async (shopId: string): Promise<{ success: boolean; error?: string; archived?: boolean }> => {
+    const shop = shops.find((s) => s.id === shopId);
+    if (!shop) return { success: false, error: 'Shop not found.' };
+
+    if (shop.outstandingAmount > 0) {
+      addToast({
+        type: 'warning',
+        title: 'Outstanding Balance Pending',
+        message: `Cannot delete ${shop.shopName} while an outstanding balance of ₹${shop.outstandingAmount.toLocaleString('en-IN')} remains.`,
+      });
+      return { success: false, error: 'Outstanding dues pending.' };
+    }
+
+    try {
+      const res = await deleteShopFromBackend(shopId);
+      if (res.success) {
+        if (res.archived) {
+          setShops((prev) => prev.map((s) => (s.id === shopId ? { ...s, status: 'Blocked' } : s)));
+          logAudit('Shop Deactivated', 'Shops', `Deactivated "${shop.shopName}" to preserve historical invoices & ledger.`);
+          addToast({
+            type: 'warning',
+            title: 'Shop Blocked & Preserved',
+            message: res.message || `${shop.shopName} archived to preserve audit ledger.`,
+          });
+        } else {
+          setShops((prev) => prev.filter((s) => s.id !== shopId));
+          logAudit('Shop Deleted', 'Shops', `Removed shop "${shop.shopName}"`);
+          addToast({
+            type: 'success',
+            title: 'Shop Deleted',
+            message: `${shop.shopName} deleted from PostgreSQL database.`,
+          });
+        }
+        await reloadWorkspaceFromBackend();
+        return { success: true, archived: res.archived };
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Deletion Failed',
+          message: res.error || `Failed to delete ${shop.shopName}.`,
+        });
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Network Error',
+        message: err?.message || 'Failed to connect to backend server.',
+      });
+      return { success: false, error: err?.message };
+    }
   };
 
   // 12. Add/Edit Supplier
@@ -1138,13 +1283,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
-    logAudit('Supplier Deleted', 'Suppliers', `Removed supplier ${sup.name}`);
-    addToast({
-      type: 'info',
-      title: 'Supplier Removed',
-      message: `${sup.name} removed from directory.`,
+    deleteSupplierFromBackend(supplierId).then((res) => {
+      if (res.success) {
+        if (res.archived) {
+          setSuppliers((prev) => prev.map((s) => (s.id === supplierId ? { ...s, status: 'Inactive' } : s)));
+          logAudit('Supplier Deactivated', 'Suppliers', `Deactivated supplier ${sup.name}`);
+          addToast({
+            type: 'warning',
+            title: 'Supplier Deactivated',
+            message: res.message || `${sup.name} marked Inactive to preserve financial ledgers.`,
+          });
+        } else {
+          setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+          logAudit('Supplier Deleted', 'Suppliers', `Removed supplier ${sup.name}`);
+          addToast({
+            type: 'success',
+            title: 'Supplier Removed',
+            message: `${sup.name} permanently deleted from PostgreSQL database.`,
+          });
+        }
+        reloadWorkspaceFromBackend();
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Deletion Failed',
+          message: res.error || `Failed to delete ${sup.name}.`,
+        });
+      }
     });
+  };
+
+  const deleteExpense = async (expenseId: string): Promise<{ success: boolean; error?: string }> => {
+    const exp = expenses.find((e) => e.id === expenseId);
+    if (!exp) return { success: false, error: 'Expense voucher not found.' };
+
+    try {
+      const res = await deleteExpenseFromBackend(expenseId);
+      if (res.success) {
+        setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+        logAudit('Expense Deleted', 'Expenses', `Removed voucher ${exp.voucherNo} (₹${exp.amount})`);
+        addToast({
+          type: 'success',
+          title: 'Expense Voucher Deleted',
+          message: `${exp.voucherNo} removed from PostgreSQL and cash balance reversed if cash payment.`,
+        });
+        await reloadWorkspaceFromBackend();
+        return { success: true };
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Expense Deletion Failed',
+          message: res.error || 'Failed to remove expense voucher.',
+        });
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Network Error',
+        message: err?.message || 'Failed to connect to backend server.',
+      });
+      return { success: false, error: err?.message };
+    }
   };
 
   // Brand Management Actions
@@ -1462,11 +1662,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordStockAdjustment,
         recordStockTransfer,
         recordExpense,
+        deleteExpense,
         closeDailyCash,
         addProduct,
         updateProduct,
+        deleteProduct,
+        bulkDeleteProducts,
         addShop,
         updateShop,
+        deleteShop,
         addSupplier,
         updateSupplier,
         deleteSupplier,

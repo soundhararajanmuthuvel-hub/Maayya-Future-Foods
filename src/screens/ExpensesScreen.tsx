@@ -15,13 +15,16 @@ import {
   CheckCircle,
   AlertTriangle,
   Lock,
+  Trash2,
 } from 'lucide-react';
+import { ConfirmDeleteModal } from '../components/common/ConfirmDeleteModal';
 
 export const ExpensesScreen: React.FC = () => {
   const {
     expenses,
     dailyCash,
     recordExpense,
+    deleteExpense,
     closeDailyCash,
     addToast,
   } = useApp();
@@ -29,6 +32,8 @@ export const ExpensesScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'expenses' | 'cashbook' | 'closing'>('expenses');
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
   const [isClosingModalOpen, setIsClosingModalOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<ExpenseItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Expense form
   const [category, setCategory] = useState<ExpenseItem['category']>('Cold Storage Electricity');
@@ -122,6 +127,21 @@ export const ExpensesScreen: React.FC = () => {
     {
       header: 'Approved By',
       render: (e) => <span className="text-slate-500">{e.approvedBy}</span>,
+    },
+    {
+      header: 'Actions',
+      align: 'right',
+      render: (e) => (
+        <div className="flex items-center justify-end" onClick={(ev) => ev.stopPropagation()}>
+          <button
+            onClick={() => setExpenseToDelete(e)}
+            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+            title={`Delete ${e.voucherNo}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -530,6 +550,33 @@ export const ExpensesScreen: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Delete Expense Modal */}
+      {expenseToDelete && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(expenseToDelete)}
+          onClose={() => setExpenseToDelete(null)}
+          title="Delete Expense Voucher"
+          recordType="Expense Voucher"
+          recordName={`${expenseToDelete.voucherNo} (${expenseToDelete.category})`}
+          details={`Amount: ${formatINR(expenseToDelete.amount, true)} · Payee: ${expenseToDelete.paidTo} · Mode: ${expenseToDelete.paymentMode}`}
+          warningNote={
+            expenseToDelete.paymentMode === 'Cash'
+              ? 'Deleting this cash expense will automatically reverse the deduction and restore the drawer cash balance in PostgreSQL.'
+              : undefined
+          }
+          isProcessing={isDeleting}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              await deleteExpense(expenseToDelete.id);
+              setExpenseToDelete(null);
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

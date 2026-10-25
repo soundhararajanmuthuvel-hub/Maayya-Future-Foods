@@ -19,7 +19,9 @@ import {
   MessageSquare,
   ExternalLink,
   RotateCw,
+  Trash2,
 } from 'lucide-react';
+import { ConfirmDeleteModal } from '../components/common/ConfirmDeleteModal';
 
 export const ShopsScreen: React.FC = () => {
   const {
@@ -30,6 +32,7 @@ export const ShopsScreen: React.FC = () => {
     setSelectedShopId,
     addShop,
     updateShop,
+    deleteShop,
     recordShopPayment,
     setPrintableInvoice,
     addToast,
@@ -38,6 +41,8 @@ export const ShopsScreen: React.FC = () => {
   } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [shopToDelete, setShopToDelete] = useState<RetailShop | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Auto-sync shops when opening the screen or switching back to this tab
   useEffect(() => {
@@ -367,6 +372,13 @@ export const ShopsScreen: React.FC = () => {
             className="px-2 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors"
           >
             Ledger
+          </button>
+          <button
+            onClick={() => setShopToDelete(s)}
+            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+            title={`Delete ${s.shopName}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       ),
@@ -937,6 +949,29 @@ export const ShopsScreen: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Confirm Delete Shop Modal */}
+      {shopToDelete && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(shopToDelete)}
+          onClose={() => setShopToDelete(null)}
+          title="Delete Retail Shop"
+          recordType="Retail Shop"
+          recordName={`${shopToDelete.shopName} (${shopToDelete.code})`}
+          details={`Owner: ${shopToDelete.ownerName} · Area: ${shopToDelete.routeArea} · Outstanding: ${formatINR(shopToDelete.outstandingAmount)}`}
+          warningNote="If this shop has historical sales bills or ledger payments on record, it will be deactivated and blocked rather than deleted, preserving statutory GST audit records."
+          isProcessing={isDeleting}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              await deleteShop(shopToDelete.id);
+              setShopToDelete(null);
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+        />
       )}
     </div>
   );

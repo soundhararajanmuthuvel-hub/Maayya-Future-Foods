@@ -5,7 +5,8 @@ import { formatINR, getStockStatus } from '../utils/formatters';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
-import { Plus, Eye, Edit, Package, Layers, Warehouse, TrendingUp, Sparkles, RotateCw } from 'lucide-react';
+import { Plus, Eye, Edit, Package, Layers, Warehouse, TrendingUp, Sparkles, RotateCw, Trash2, CheckSquare } from 'lucide-react';
+import { ConfirmDeleteModal } from '../components/common/ConfirmDeleteModal';
 
 export const ProductsScreen: React.FC = () => {
   const {
@@ -15,10 +16,17 @@ export const ProductsScreen: React.FC = () => {
     setSelectedProductId,
     addProduct,
     updateProduct,
+    deleteProduct,
+    bulkDeleteProducts,
     reloadWorkspaceFromBackend,
   } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   // Auto-sync products when opening the screen or switching back to this tab
   useEffect(() => {
@@ -186,13 +194,40 @@ export const ProductsScreen: React.FC = () => {
   // Columns definition for DataTable
   const columns: Column<Product>[] = [
     {
+      header: '',
+      width: '40px',
+      align: 'center',
+      render: (p) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(p.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            if (e.target.checked) {
+              setSelectedIds((prev) => [...prev, p.id]);
+            } else {
+              setSelectedIds((prev) => prev.filter((id) => id !== p.id));
+            }
+          }}
+          className="rounded text-slate-900 border-slate-300 focus:ring-0 cursor-pointer"
+        />
+      ),
+    },
+    {
       header: 'Code / Item',
       width: '280px',
       sortable: true,
       accessor: 'name',
       render: (p) => (
         <div>
-          <div className="font-semibold text-slate-900">{p.name}</div>
+          <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <span>{p.name}</span>
+            {!p.isActive && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
+                Archived
+              </span>
+            )}
+          </div>
           <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
             <span>{p.code}</span>
             <span>·</span>
@@ -272,6 +307,13 @@ export const ProductsScreen: React.FC = () => {
           >
             <Edit className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setProductToDelete(p)}
+            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+            title={`Delete ${p.name}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       ),
     },
@@ -335,6 +377,15 @@ export const ProductsScreen: React.FC = () => {
         onRowClick={(p) => setSelectedProductId(p.id)}
         actions={
           <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 rounded hover:bg-rose-700 transition-colors shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+            )}
             <button
               onClick={async () => {
                 setIsRefreshing(true);
@@ -749,6 +800,53 @@ export const ProductsScreen: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Single Product Confirm Delete Modal */}
+      {productToDelete && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(productToDelete)}
+          onClose={() => setProductToDelete(null)}
+          title="Delete Product"
+          recordType="Product"
+          recordName={`${productToDelete.name} (${productToDelete.code})`}
+          details={`Current stock: ${productToDelete.currentStock} ${productToDelete.unit} · MRP: ${formatINR(productToDelete.mrp)}`}
+          warningNote="If this product has historical invoices or purchases, it will be safely deactivated & archived rather than permanently purged, keeping past accounting and audit records intact."
+          isProcessing={isDeleting}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              await deleteProduct(productToDelete.id);
+              setProductToDelete(null);
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+        />
+      )}
+
+      {/* Bulk Products Confirm Delete Modal */}
+      {isBulkDeleteModalOpen && (
+        <ConfirmDeleteModal
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => setIsBulkDeleteModalOpen(false)}
+          title="Bulk Delete Products"
+          recordType={`${selectedIds.length} Products`}
+          recordName={`${selectedIds.length} selected items`}
+          details="All unreferenced items will be permanently removed. Any items linked to past sales or inward purchases will be automatically archived to preserve financial records."
+          confirmButtonLabel={`Delete ${selectedIds.length} Products`}
+          isProcessing={isBulkProcessing}
+          onConfirm={async () => {
+            setIsBulkProcessing(true);
+            try {
+              await bulkDeleteProducts(selectedIds);
+              setSelectedIds([]);
+              setIsBulkDeleteModalOpen(false);
+            } finally {
+              setIsBulkProcessing(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
