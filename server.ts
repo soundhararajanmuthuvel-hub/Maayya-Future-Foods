@@ -173,6 +173,17 @@ app.post('/api/push/send-test', async (req, res) => {
   });
 });
 
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Maayya Future Foods Backend',
+    developer: 'MSR Solutions',
+    timestamp: new Date().toISOString(),
+    owner: 'Kalai',
+    terminalDesk: 'TERMINAL-01 (Main POS)',
+  });
+});
+
 app.get('/api/push/status', (_req, res) => {
   res.json({
     activeSubscriptions: subscriptions.length,

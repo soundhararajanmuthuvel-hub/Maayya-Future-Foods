@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './notificationService';
+import { buildApiUrl, getApiBaseUrl } from './apiClient';
 
 export interface VerifyPinResult {
   success: boolean;
@@ -8,8 +8,7 @@ export interface VerifyPinResult {
   owner?: string;
   role?: string;
   terminalDesk?: string;
-  source?: 'render_backend' | 'vercel_api' | 'offline_terminal';
-  isFatal?: boolean;
+  source?: 'render_backend' | 'vercel_api' | 'local_server';
 }
 
 /**
@@ -34,14 +33,12 @@ export function extractSafeErrorMessage(err: unknown, fallback = 'Verification e
 }
 
 /**
- * Validates Security PIN via:
- * 1. Configured Render backend (`VITE_BACKEND_URL/api/auth/verify-pin` if set)
- * 2. Vercel Serverless API (`/api/auth/verify-pin`)
+ * Validates Security PIN via the Render backend (`/api/auth/verify-pin`).
+ * Falls back to Vercel Serverless Function `/api/auth/verify-pin` only if Render is temporarily unreachable.
  *
- * Robust Error Handling:
- * - Handles 405 (Method Not Allowed), 404 (Not Found), 500, network outage, and non-JSON responses.
- * - Safely extracts JSON without crashing on HTML response bodies.
- * - Enforces correct PIN check (1911) with no hardcoded frontend success bypass.
+ * Security:
+ * - Never returns or hardcodes PIN in public frontend code.
+ * - Enforces server-side validation and rate limiting.
  */
 export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyPinResult> {
   const trimmedPin = typeof pin === 'string' ? pin.trim() : '';
@@ -53,19 +50,13 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
     };
   }
 
-  // Determine target API endpoints to attempt:
-  // First, if VITE_BACKEND_URL or VITE_API_BASE_URL is specified, try the Render backend.
-  // Next, try the local/relative `/api/auth/verify-pin` endpoint (serviced by server.ts or Vercel Serverless Function).
-  const configuredBaseUrl = getApiBaseUrl();
-  const candidateEndpoints: string[] = [];
+  // Candidate endpoints ordered by priority:
+  // 1. Centralized Render Backend API URL
+  // 2. Local/Vercel serverless relative URL (/api/auth/verify-pin)
+  const primaryEndpoint = buildApiUrl('/api/auth/verify-pin');
+  const fallbackEndpoint = '/api/auth/verify-pin';
 
-  if (configuredBaseUrl) {
-    candidateEndpoints.push(`${configuredBaseUrl}/api/auth/verify-pin`);
-  }
-  candidateEndpoints.push('/api/auth/verify-pin');
-
-  // De-duplicate endpoints
-  const endpointsToTry = Array.from(new Set(candidateEndpoints));
+  const endpointsToTry = Array.from(new Set([primaryEndpoint, fallbackEndpoint]));
 
   let lastError = '';
   let isRateLimited = false;
@@ -74,7 +65,7 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
   for (const endpoint of endpointsToTry) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       let response: Response;
       try {
@@ -98,12 +89,10 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
       if (isJson) {
         try {
           data = await response.json();
-        } catch (_) {
-          // Handled below
-        }
+        } catch (_) {}
       }
 
-      // Handle successful validation
+      // Successful verification
       if (response.ok && data && data.success) {
         return {
           success: true,
@@ -115,7 +104,7 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
         };
       }
 
-      // Handle Rate Limiting (429)
+      // Rate-limited (429)
       if (response.status === 429) {
         isRateLimited = true;
         remainingBlockedSecs = typeof data?.blockedSeconds === 'number' ? data.blockedSeconds : 60;
@@ -123,10 +112,10 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
           data?.error,
           `Too many failed attempts. Terminal locked for ${remainingBlockedSecs} seconds.`
         );
-        break; // Stop trying other endpoints if rate-limited
+        break; // Do not try fallback if rate-limited
       }
 
-      // Handle Wrong PIN (401)
+      // Incorrect PIN (401)
       if (response.status === 401 && data && data.error) {
         return {
           success: false,
@@ -135,24 +124,17 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
         };
       }
 
-      // Handle 405 Method Not Allowed
+      // 405 Method Not Allowed
       if (response.status === 405) {
-        console.warn(`Endpoint ${endpoint} returned HTTP 405 (Method Not Allowed).`);
-        lastError = 'Authentication service method error (HTTP 405). Trying alternative route...';
+        console.warn(`Endpoint ${endpoint} returned HTTP 405. Trying fallback route...`);
+        lastError = 'Authentication service method error (HTTP 405).';
         continue;
       }
 
-      // Handle 404 Not Found (e.g. backend route unmounted or Render down)
+      // 404 Route Not Found
       if (response.status === 404) {
-        console.warn(`Endpoint ${endpoint} returned HTTP 404.`);
-        lastError = 'Authentication service route not found (HTTP 404). Trying alternative route...';
-        continue;
-      }
-
-      // Non-JSON or other HTTP errors
-      if (!isJson) {
-        console.warn(`Endpoint ${endpoint} returned non-JSON HTTP ${response.status}.`);
-        lastError = `Server returned invalid response (HTTP ${response.status}).`;
+        console.warn(`Endpoint ${endpoint} returned HTTP 404. Trying fallback route...`);
+        lastError = 'Authentication service route not found (HTTP 404).';
         continue;
       }
 
@@ -165,11 +147,10 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
       }
     } catch (networkError: any) {
       console.warn(`Failed to connect to ${endpoint}:`, networkError?.message || networkError);
-      lastError = 'Unable to reach authentication server. Check network connection.';
+      lastError = 'Unable to reach backend authentication server. Check network connection.';
     }
   }
 
-  // If rate-limited across all attempts
   if (isRateLimited) {
     return {
       success: false,
@@ -178,9 +159,8 @@ export async function verifySecurityPinWithBackend(pin: string): Promise<VerifyP
     };
   }
 
-  // If both endpoints failed due to network / 405 / 404
   return {
     success: false,
-    error: lastError || 'Security PIN verification failed. Please try again or check backend service status.',
+    error: lastError || 'Security PIN verification failed. Please try again.',
   };
 }

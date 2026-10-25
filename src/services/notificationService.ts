@@ -1,15 +1,7 @@
-/**
- * Returns the backend API base URL for Render deployment or local development.
- * Vercel frontend connects to Render backend via VITE_BACKEND_URL or VITE_API_BASE_URL.
- */
-export function getApiBaseUrl(): string {
-  if (typeof window === 'undefined') return '';
-  const envUrl =
-    (import.meta as any).env?.VITE_BACKEND_URL ||
-    (import.meta as any).env?.VITE_API_BASE_URL ||
-    '';
-  return envUrl ? envUrl.replace(/\/+$/, '') : '';
-}
+import { buildApiUrl, getApiBaseUrl } from './apiClient';
+
+// Re-export getApiBaseUrl for backwards compatibility across existing modules
+export { getApiBaseUrl };
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -67,6 +59,7 @@ export interface BackendVapidStatus {
   configured: boolean;
   reachable: boolean;
   activeSubscriptions?: number;
+  backendUrl?: string;
   message?: string;
 }
 
@@ -74,29 +67,37 @@ export interface BackendVapidStatus {
  * Checks if the Render backend VAPID push engine is active and reachable
  */
 export async function fetchBackendVapidStatus(): Promise<BackendVapidStatus> {
-  const baseUrl = getApiBaseUrl();
+  const targetUrl = buildApiUrl('/api/push/status');
+  const activeBase = getApiBaseUrl() || window.location.origin;
+
   try {
-    const res = await fetch(`${baseUrl}/api/push/status`, {
+    const res = await fetch(targetUrl, {
       method: 'GET',
       headers: { Accept: 'application/json' },
     });
+
     if (!res.ok) {
       return {
         configured: false,
         reachable: false,
+        backendUrl: activeBase,
         message: `Backend returned HTTP status ${res.status}`,
       };
     }
+
     const data = await res.json();
     return {
       configured: Boolean(data.vapidConfigured),
       reachable: true,
-      activeSubscriptions: data.activeSubscriptions || 0,
+      activeSubscriptions: data.activeSubscriptions ?? 0,
+      backendUrl: activeBase,
+      message: data.message || 'Connected to Render Push Engine',
     };
   } catch (err: any) {
     return {
       configured: false,
       reachable: false,
+      backendUrl: activeBase,
       message: err?.message || 'Unable to reach backend VAPID engine.',
     };
   }
@@ -116,6 +117,10 @@ export async function getExistingPushSubscription(): Promise<PushSubscription | 
   }
 }
 
+/**
+ * Subscribes the current device to Web Push notifications.
+ * Connects to the Render backend to retrieve the VAPID key and store the subscription.
+ */
 export async function subscribeToPushNotifications(): Promise<{ success: boolean; message: string }> {
   try {
     const supported = await isPushNotificationSupported();
@@ -137,9 +142,8 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
     // Wait for service worker registration
     const registration = await navigator.serviceWorker.ready;
 
-    // Fetch VAPID public key from backend (using baseUrl for Render backend)
-    const baseUrl = getApiBaseUrl();
-    const keyUrl = `${baseUrl}/api/push/vapid-public-key`;
+    // Fetch VAPID public key from backend
+    const keyUrl = buildApiUrl('/api/push/vapid-public-key');
     
     let keyResponse: Response;
     try {
@@ -178,8 +182,9 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
       });
     }
 
-    // Post to backend
-    const subscribeResponse = await fetch(`${baseUrl}/api/push/subscribe`, {
+    // Post to backend /api/push/subscribe
+    const subscribeUrl = buildApiUrl('/api/push/subscribe');
+    const subscribeResponse = await fetch(subscribeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -189,12 +194,18 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
     });
 
     if (!subscribeResponse.ok) {
-      throw new Error('Failed to register subscription with backend server.');
+      let errMsg = 'Failed to register subscription with backend server.';
+      try {
+        const errData = await subscribeResponse.json();
+        if (errData.error) errMsg = errData.error;
+      } catch (_) {}
+      throw new Error(errMsg);
     }
 
+    const result = await subscribeResponse.json();
     return {
       success: true,
-      message: 'Browser push notifications successfully registered with backend!',
+      message: result.message || 'Browser push notifications successfully registered with backend!',
     };
   } catch (error: any) {
     console.error('Push subscription error:', error);
@@ -205,6 +216,49 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
   }
 }
 
+/**
+ * Unsubscribes current device from Web Push notifications and informs the backend.
+ */
+export async function unsubscribeFromPushNotifications(): Promise<{ success: boolean; message: string }> {
+  try {
+    const subscription = await getExistingPushSubscription();
+    if (subscription) {
+      const endpoint = subscription.endpoint;
+      await subscription.unsubscribe();
+
+      // Inform backend
+      try {
+        const unsubUrl = buildApiUrl('/api/push/unsubscribe');
+        await fetch(unsubUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+      } catch (_) {
+        // Local unsubscribe succeeded even if backend call timed out
+      }
+
+      return {
+        success: true,
+        message: 'Successfully unsubscribed from browser push notifications.',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'No active push subscription to unsubscribe.',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'Failed to unsubscribe.',
+    };
+  }
+}
+
+/**
+ * Dispatches a test Web Push alert through the Render backend engine.
+ */
 export async function sendTestPushNotification(
   title?: string,
   body?: string,
@@ -212,8 +266,8 @@ export async function sendTestPushNotification(
   preferences?: NotificationPreferences
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/api/push/send-test`, {
+    const testUrl = buildApiUrl('/api/push/send-test');
+    const response = await fetch(testUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
