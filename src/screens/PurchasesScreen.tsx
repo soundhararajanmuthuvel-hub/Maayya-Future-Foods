@@ -332,17 +332,26 @@ export const PurchasesScreen: React.FC = () => {
           {/* Supplier & Header Info */}
           <div className="grid grid-cols-4 gap-3 bg-slate-50 p-3 rounded border border-slate-200">
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">Supplier Depot</label>
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Supplier Depot <span className="text-rose-500">*</span>
+              </label>
               <select
+                required
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
-                className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded bg-white"
+                className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium"
               >
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {suppliers.length === 0 ? (
+                  <option value="">No suppliers registered (Add in Suppliers tab)</option>
+                ) : (
+                  suppliers
+                    .filter((s) => (s.status || 'Active') === 'Active' || s.id === supplierId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.city})
+                      </option>
+                    ))
+                )}
               </select>
             </div>
             <div>
@@ -373,6 +382,27 @@ export const PurchasesScreen: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Selected Supplier Status Banner */}
+          {selectedSupplier && (
+            <div className="flex flex-wrap items-center justify-between p-2.5 bg-blue-50/70 border border-blue-200 rounded text-xs gap-2">
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-sky-700" />
+                <span className="font-semibold text-slate-900">{selectedSupplier.name}</span>
+                <span className="text-slate-500">· {selectedSupplier.city}</span>
+                {selectedSupplier.gstin && <span className="font-mono text-slate-500 text-[11px]">· GST: {selectedSupplier.gstin}</span>}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-600">
+                  Credit Terms: <strong>{selectedSupplier.paymentTermsDays} Days</strong>
+                </span>
+                <span className="text-slate-300">|</span>
+                <span className="text-[11px] text-slate-700">
+                  Current Outstanding: <strong className="font-mono text-amber-800">{formatINR(selectedSupplier.outstandingPayable)}</strong>
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Line Items Table */}
           <div>

@@ -16,6 +16,7 @@ import {
   Flame,
   HelpCircle,
   Building2,
+  Tag,
 } from 'lucide-react';
 import { MsrLogo } from '../common/MsrLogo';
 
@@ -72,10 +73,16 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'products',
-      label: 'Products & Brands',
+      label: 'Products Catalog',
       icon: <Package className="w-4 h-4" />,
       badge: lowStockCount > 0 ? lowStockCount : undefined,
       badgeVariant: 'warning',
+      category: 'Inventory',
+    },
+    {
+      id: 'brands',
+      label: 'Brands Directory',
+      icon: <Tag className="w-4 h-4" />,
       category: 'Inventory',
     },
     {

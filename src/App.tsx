@@ -22,6 +22,7 @@ import { OfflineIndicator } from './components/common/OfflineIndicator';
 // Screens
 import { DashboardScreen } from './screens/DashboardScreen';
 import { ProductsScreen } from './screens/ProductsScreen';
+import { BrandsScreen } from './screens/BrandsScreen';
 import { SuppliersScreen } from './screens/SuppliersScreen';
 import { ShopsScreen } from './screens/ShopsScreen';
 import { PurchasesScreen } from './screens/PurchasesScreen';
@@ -62,6 +63,8 @@ const MainLayout: React.FC = () => {
         return <InvoicesScreen />;
       case 'products':
         return <ProductsScreen />;
+      case 'brands':
+        return <BrandsScreen />;
       case 'purchases':
         return <PurchasesScreen />;
       case 'inventory':

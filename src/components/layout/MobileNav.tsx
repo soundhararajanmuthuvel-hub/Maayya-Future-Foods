@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Bell,
   Smartphone,
+  Tag,
 } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
@@ -53,7 +54,8 @@ export const MobileNav: React.FC = () => {
     { id: 'billing-direct', label: 'Direct POS Billing', icon: <ShoppingCart className="w-4 h-4" />, category: 'Sales & Billing' },
     { id: 'billing-retail', label: 'Retail Shop Billing', icon: <Receipt className="w-4 h-4" />, category: 'Sales & Billing' },
     { id: 'invoices', label: 'Sales Invoices', icon: <FileText className="w-4 h-4" />, category: 'Sales & Billing' },
-    { id: 'products', label: 'Products & Brands', icon: <Package className="w-4 h-4" />, category: 'Inventory', badge: lowStockCount, badgeVariant: 'warning' },
+    { id: 'products', label: 'Products Catalog', icon: <Package className="w-4 h-4" />, category: 'Inventory', badge: lowStockCount, badgeVariant: 'warning' },
+    { id: 'brands', label: 'Brands Directory', icon: <Tag className="w-4 h-4" />, category: 'Inventory' },
     { id: 'inventory', label: 'Stock & Freezers', icon: <Warehouse className="w-4 h-4" />, category: 'Inventory' },
     { id: 'purchases', label: 'Purchases & Inward', icon: <Truck className="w-4 h-4" />, category: 'Purchases', badge: draftPurchasesCount, badgeVariant: 'info' },
     { id: 'suppliers', label: 'Suppliers Directory', icon: <Building2 className="w-4 h-4" />, category: 'Purchases' },

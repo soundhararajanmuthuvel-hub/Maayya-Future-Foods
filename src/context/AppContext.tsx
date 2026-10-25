@@ -40,6 +40,7 @@ import {
 export type ScreenId =
   | 'dashboard'
   | 'products'
+  | 'brands'
   | 'suppliers'
   | 'shops'
   | 'purchases'
@@ -154,6 +155,8 @@ interface AppContextType {
   updateShop: (shop: RetailShop) => void;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => void;
   updateSupplier: (supplier: Supplier) => void;
+  deleteSupplier: (supplierId: string) => void;
+  toggleSupplierStatus: (supplierId: string) => void;
   addBrand: (brand: Omit<Brand, 'id'>) => Brand;
   updateBrand: (brand: Brand) => void;
   deleteBrand: (brandId: string) => void;
@@ -885,14 +888,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 12. Add/Edit Supplier
   const addSupplier = (supData: Omit<Supplier, 'id' | 'code'>) => {
+    const existing = suppliers.find(
+      (s) => s.name.trim().toLowerCase() === supData.name.trim().toLowerCase()
+    );
+    if (existing) {
+      addToast({
+        type: 'warning',
+        title: 'Supplier Already Exists',
+        message: `A supplier named "${supData.name.trim()}" is already registered in the directory.`,
+      });
+      return;
+    }
+
     const code = `SUP-${Math.floor(100 + Math.random() * 900)}`;
     const newSup: Supplier = {
       ...supData,
+      name: supData.name.trim(),
       id: `sup-${Date.now()}`,
       code,
+      status: supData.status || 'Active',
+      outstandingPayable: supData.openingBalance ? Number(supData.openingBalance) : 0,
+      totalPurchases: 0,
+      amountPaid: 0,
     };
     setSuppliers((prev) => [...prev, newSup]);
-    logAudit('Supplier Added', 'Suppliers', `Added ${newSup.name}`);
+    logAudit('Supplier Added', 'Suppliers', `Added ${newSup.name} (Code: ${code})`);
     addToast({
       type: 'success',
       title: 'Supplier Added',
@@ -901,7 +921,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSupplier = (sup: Supplier) => {
-    setSuppliers((prev) => prev.map((s) => (s.id === sup.id ? sup : s)));
+    // Check duplicate name
+    const duplicate = suppliers.find(
+      (s) => s.id !== sup.id && s.name.trim().toLowerCase() === sup.name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      addToast({
+        type: 'warning',
+        title: 'Duplicate Supplier Name',
+        message: `Another supplier named "${sup.name.trim()}" already exists.`,
+      });
+      return;
+    }
+
+    setSuppliers((prev) => prev.map((s) => (s.id === sup.id ? { ...sup, name: sup.name.trim() } : s)));
+    logAudit('Supplier Updated', 'Suppliers', `Updated ${sup.name}`);
     addToast({
       type: 'info',
       title: 'Supplier Updated',
@@ -909,12 +943,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const toggleSupplierStatus = (supplierId: string) => {
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === supplierId) {
+          const nextStatus = s.status === 'Inactive' ? 'Active' : 'Inactive';
+          if (nextStatus === 'Inactive' && s.outstandingPayable > 0) {
+            addToast({
+              type: 'warning',
+              title: 'Deactivating Supplier with Outstanding Balance',
+              message: `Warning: ${s.name} has an outstanding payable of ₹${s.outstandingPayable.toLocaleString('en-IN')}.`,
+            });
+          }
+          addToast({
+            type: 'info',
+            title: `Supplier ${nextStatus}`,
+            message: `${s.name} marked as ${nextStatus}.`,
+          });
+          return { ...s, status: nextStatus };
+        }
+        return s;
+      })
+    );
+  };
+
+  const deleteSupplier = (supplierId: string) => {
+    const sup = suppliers.find((s) => s.id === supplierId);
+    if (!sup) return;
+
+    // Check if supplier has linked purchases
+    const linkedPurchases = purchases.filter((p) => p.supplierId === supplierId);
+    if (linkedPurchases.length > 0) {
+      addToast({
+        type: 'warning',
+        title: 'Cannot Delete Supplier',
+        message: `Cannot delete "${sup.name}" because it has ${linkedPurchases.length} linked purchase bill(s). Deactivate instead.`,
+      });
+      return;
+    }
+
+    if (sup.outstandingPayable > 0) {
+      addToast({
+        type: 'warning',
+        title: 'Cannot Delete Supplier',
+        message: `Cannot delete "${sup.name}" while an outstanding balance of ₹${sup.outstandingPayable.toLocaleString('en-IN')} remains.`,
+      });
+      return;
+    }
+
+    setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+    logAudit('Supplier Deleted', 'Suppliers', `Removed supplier ${sup.name}`);
+    addToast({
+      type: 'info',
+      title: 'Supplier Removed',
+      message: `${sup.name} removed from directory.`,
+    });
+  };
+
   // Brand Management Actions
   const addBrand = (brandData: Omit<Brand, 'id'>): Brand => {
+    // Prevent duplicate brand name
+    const existing = brands.find(
+      (b) => b.name.trim().toLowerCase() === brandData.name.trim().toLowerCase()
+    );
+    if (existing) {
+      addToast({
+        type: 'warning',
+        title: 'Brand Already Exists',
+        message: `A brand named "${brandData.name.trim()}" is already registered.`,
+      });
+      return existing;
+    }
+
     const id = `brand-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const newBrand: Brand = {
       ...brandData,
+      name: brandData.name.trim(),
       id,
+      createdAt: brandData.createdAt || new Date().toISOString().split('T')[0],
     };
     setBrands((prev) => [...prev, newBrand]);
     logAudit('Create Brand', 'Brands', `Added new product brand "${newBrand.name}" (${newBrand.category})`);
@@ -927,7 +1033,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBrand = (updatedBrand: Brand) => {
-    setBrands((prev) => prev.map((b) => (b.id === updatedBrand.id ? updatedBrand : b)));
+    // Prevent duplicate name if changed
+    const duplicate = brands.find(
+      (b) => b.id !== updatedBrand.id && b.name.trim().toLowerCase() === updatedBrand.name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      addToast({
+        type: 'warning',
+        title: 'Duplicate Brand Name',
+        message: `Another brand named "${updatedBrand.name.trim()}" already exists.`,
+      });
+      return;
+    }
+
+    setBrands((prev) => prev.map((b) => (b.id === updatedBrand.id ? { ...updatedBrand, name: updatedBrand.name.trim() } : b)));
     logAudit('Update Brand', 'Brands', `Updated profile and logo settings for "${updatedBrand.name}"`);
     addToast({
       type: 'info',
@@ -939,6 +1058,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteBrand = (brandId: string) => {
     const brand = brands.find((b) => b.id === brandId);
     if (!brand) return;
+
+    // Check if brand is linked to existing products
+    const linkedProducts = products.filter(
+      (p) => p.brand.trim().toLowerCase() === brand.name.trim().toLowerCase()
+    );
+    if (linkedProducts.length > 0) {
+      addToast({
+        type: 'warning',
+        title: 'Cannot Delete Brand',
+        message: `Cannot delete "${brand.name}" because it is linked to ${linkedProducts.length} product(s). Deactivate it instead.`,
+      });
+      return;
+    }
+
+    // Check if brand is referenced in existing invoices
+    const usedInInvoices = invoices.some((inv) =>
+      inv.items.some((i) => i.brand.trim().toLowerCase() === brand.name.trim().toLowerCase())
+    );
+    if (usedInInvoices) {
+      addToast({
+        type: 'warning',
+        title: 'Historical Audit Protection',
+        message: `Cannot delete "${brand.name}" because it is referenced in past invoices. Deactivate it instead.`,
+      });
+      return;
+    }
+
     if (brand.isInitial) {
       addToast({
         type: 'warning',
@@ -961,6 +1107,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((b) => {
         if (b.id === brandId) {
           const nextStatus = b.status === 'Active' ? 'Inactive' : 'Active';
+          if (nextStatus === 'Inactive') {
+            const linkedCount = products.filter(
+              (p) => p.brand.trim().toLowerCase() === b.name.trim().toLowerCase()
+            ).length;
+            if (linkedCount > 0) {
+              addToast({
+                type: 'warning',
+                title: 'Brand Deactivated with Linked Products',
+                message: `Notice: "${b.name}" has ${linkedCount} active product(s). They will remain in catalog but brand will be marked Inactive.`,
+              });
+            }
+          }
           addToast({
             type: 'info',
             title: `Brand ${nextStatus}`,
@@ -1150,6 +1308,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateShop,
         addSupplier,
         updateSupplier,
+        deleteSupplier,
+        toggleSupplierStatus,
         addBrand,
         updateBrand,
         deleteBrand,

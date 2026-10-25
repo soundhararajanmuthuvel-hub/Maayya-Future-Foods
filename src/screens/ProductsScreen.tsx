@@ -363,6 +363,39 @@ export const ProductsScreen: React.FC = () => {
           }
         >
           <div className="space-y-4">
+            {/* Brand Logo & Identification Header */}
+            {(() => {
+              const brandRecord = brands.find(
+                (b) => b.name.trim().toLowerCase() === selectedProduct.brand.trim().toLowerCase()
+              );
+              return (
+                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-10 rounded border border-slate-300 bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                      {brandRecord?.logoUrl ? (
+                        <img
+                          src={brandRecord.logoUrl}
+                          alt={`${selectedProduct.brand} logo`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-mono font-semibold">
+                          {selectedProduct.brand.slice(0, 8)}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Product Brand</span>
+                      <h4 className="font-bold text-slate-900 text-sm">{selectedProduct.brand}</h4>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 font-medium">
+                    SKU: {selectedProduct.code}
+                  </span>
+                </div>
+              );
+            })()}
+
             {/* Rates & Profitability Matrix */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-3 rounded border border-slate-200">
               <div>

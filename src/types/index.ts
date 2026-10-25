@@ -4,9 +4,11 @@ export interface Brand {
   id: string;
   name: string;
   logoUrl: string; // Asset path, uploaded data URL, or external URL
-  category: string; // e.g. 'Dairy & Milk', 'Ice Cream & Desserts'
+  category: string; // e.g. 'Ice Cream', 'Milk Products', 'Other'
   status: 'Active' | 'Inactive';
   description?: string;
+  contactDetails?: string;
+  createdAt?: string;
   isInitial?: boolean;
 }
 
@@ -17,19 +19,25 @@ export interface InvoiceBrandLogo {
 
 export interface CompanyInfo {
   name: string;
-  tradeName: string;
-  distributorTitle: string;
-  gstin: string;
-  fssai: string;
+  tradeName?: string;
+  distributorTitle?: string;
+  logoUrl?: string;
+  address: string;
+  city: string;
+  state?: string;
+  pincode?: string;
   phone: string;
   email: string;
-  city: string;
-  address: string;
-  stateCode: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  upiId: string;
+  gstin?: string;
+  fssai?: string;
+  stateCode?: string;
+  financialYear?: string;
+  invoicePrefix?: string;
+  posPrefix?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  upiId?: string;
 }
 
 export type ProductCategory = 
@@ -84,12 +92,18 @@ export interface Supplier {
   contactPerson: string;
   phone: string;
   email: string;
-  gstin: string;
+  gstin?: string;
   city: string;
+  state?: string;
+  pincode?: string;
   address: string;
   paymentTermsDays: number;
+  openingBalance?: number;
+  notes?: string;
+  status?: 'Active' | 'Inactive';
   outstandingPayable: number;
   totalPurchases: number;
+  amountPaid?: number;
   leadTimeDays: number;
 }
 

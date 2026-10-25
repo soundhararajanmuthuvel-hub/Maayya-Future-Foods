@@ -80,7 +80,7 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ invoice, o
         <div className="flex justify-between items-start border-b border-slate-300 pb-4 mb-4 gap-4">
           <div className="flex items-start gap-3.5">
             <img
-              src="/assets/maayya-future-foods-logo.png"
+              src={companyInfo.logoUrl || '/assets/maayya-future-foods-logo.png'}
               alt={`${companyInfo.name} logo`}
               className="h-16 w-auto max-w-[85px] object-contain shrink-0"
               style={{ objectFit: 'contain' }}
@@ -95,15 +95,15 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ invoice, o
                 </span>
               </div>
               <p className="text-slate-800 font-semibold text-[11px] mt-0.5">
-                {companyInfo.city}, Tamil Nadu · Phone: {companyInfo.phone}
+                {companyInfo.city}, {companyInfo.state || 'Tamil Nadu'} {companyInfo.pincode && `· PIN: ${companyInfo.pincode}`} · Phone: {companyInfo.phone}
               </p>
               <p className="text-slate-600 text-[11px] mt-0.5">
                 {companyInfo.address}
               </p>
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-slate-600 mt-1">
-                <span><strong>GSTIN:</strong> {companyInfo.gstin}</span>
-                <span><strong>FSSAI Lic:</strong> {companyInfo.fssai}</span>
-                <span><strong>State Code:</strong> {companyInfo.stateCode}</span>
+                {companyInfo.gstin && <span><strong>GSTIN:</strong> {companyInfo.gstin}</span>}
+                {companyInfo.fssai && <span><strong>FSSAI Lic:</strong> {companyInfo.fssai}</span>}
+                {companyInfo.financialYear && <span><strong>FY:</strong> {companyInfo.financialYear}</span>}
               </div>
             </div>
           </div>

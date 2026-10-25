@@ -798,9 +798,62 @@ export const SettingsScreen: React.FC = () => {
             </span>
           </div>
 
+          {/* Business Logo Upload */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded text-xs space-y-2">
+            <label className="block font-semibold text-slate-700">Business / Company Logo</label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-16 rounded border border-slate-300 bg-white p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                <img
+                  src={companyForm.logoUrl || '/assets/maayya-future-foods-logo.png'}
+                  alt="Company Logo"
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300 font-medium transition-colors shadow-2xs">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Business Logo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === 'string') {
+                          setCompanyForm({ ...companyForm, logoUrl: reader.result as string });
+                          addToast({
+                            type: 'success',
+                            title: 'Company Logo Loaded',
+                            message: 'New company logo loaded for preview. Click Save Profile to apply.',
+                          });
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[10px] text-slate-500">
+                  Used on invoice headers and reports. PNG or high-res JPG recommended.
+                </p>
+                {companyForm.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setCompanyForm({ ...companyForm, logoUrl: '' })}
+                    className="text-[10px] text-rose-600 hover:underline block"
+                  >
+                    Reset to Default Asset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Legal Entity / Invoicing Issuer Name *</label>
+              <label className="block font-semibold text-slate-700 mb-1">Company Name <span className="text-rose-500">*</span></label>
               <input
                 type="text"
                 required
@@ -808,13 +861,13 @@ export const SettingsScreen: React.FC = () => {
                 onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-semibold text-slate-900"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Configurable company name printed on all tax invoices & bills</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Initial entity: Maayya Future Foods</span>
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Trade / Distributor Title</label>
               <input
                 type="text"
-                value={companyForm.distributorTitle || companyForm.tradeName}
+                value={companyForm.distributorTitle || companyForm.tradeName || ''}
                 onChange={(e) => setCompanyForm({ ...companyForm, distributorTitle: e.target.value, tradeName: e.target.value })}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
               />
@@ -823,22 +876,13 @@ export const SettingsScreen: React.FC = () => {
 
           <div className="grid grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Phone / Support Contact *</label>
+              <label className="block font-semibold text-slate-700 mb-1">Phone Number <span className="text-rose-500">*</span></label>
               <input
                 type="text"
                 required
                 value={companyForm.phone}
                 onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">City / Region</label>
-              <input
-                type="text"
-                value={companyForm.city}
-                onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
               />
             </div>
             <div>
@@ -850,46 +894,137 @@ export const SettingsScreen: React.FC = () => {
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
               />
             </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Financial Year</label>
+              <input
+                type="text"
+                placeholder="2026-2027"
+                value={companyForm.financialYear || '2026-2027'}
+                onChange={(e) => setCompanyForm({ ...companyForm, financialYear: e.target.value })}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">GSTIN</label>
+              <label className="block font-semibold text-slate-700 mb-1">City</label>
               <input
                 type="text"
-                value={companyForm.gstin}
+                value={companyForm.city}
+                onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">State</label>
+              <input
+                type="text"
+                value={companyForm.state || 'Tamil Nadu'}
+                onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">PIN Code</label>
+              <input
+                type="text"
+                placeholder="612001"
+                value={companyForm.pincode || ''}
+                onChange={(e) => setCompanyForm({ ...companyForm, pincode: e.target.value })}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">GSTIN (Optional)</label>
+              <input
+                type="text"
+                placeholder="33AAAAA0000A1Z5"
+                value={companyForm.gstin || ''}
                 onChange={(e) => setCompanyForm({ ...companyForm, gstin: e.target.value })}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
               />
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">FSSAI License #</label>
+              <label className="block font-semibold text-slate-700 mb-1">Invoice Prefix Preference</label>
               <input
                 type="text"
-                value={companyForm.fssai}
-                onChange={(e) => setCompanyForm({ ...companyForm, fssai: e.target.value })}
+                placeholder="INV-2026-"
+                value={companyForm.invoicePrefix || 'INV-2026-'}
+                onChange={(e) => setCompanyForm({ ...companyForm, invoicePrefix: e.target.value })}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
               />
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Place of Supply (State)</label>
+              <label className="block font-semibold text-slate-700 mb-1">FSSAI License # (Optional)</label>
               <input
                 type="text"
-                value={companyForm.stateCode}
-                onChange={(e) => setCompanyForm({ ...companyForm, stateCode: e.target.value })}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
+                value={companyForm.fssai || ''}
+                onChange={(e) => setCompanyForm({ ...companyForm, fssai: e.target.value })}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono"
               />
             </div>
           </div>
 
           <div className="text-xs">
-            <label className="block font-semibold text-slate-700 mb-1">Cold Storage Facility & Warehouse Address</label>
+            <label className="block font-semibold text-slate-700 mb-1">Business Address</label>
             <textarea
               rows={2}
               value={companyForm.address}
               onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded"
             />
+          </div>
+
+          {/* Live Invoice Header Preview */}
+          <div className="p-4 bg-slate-50 border border-slate-300 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Live Invoice Header Preview
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">Simulated Print Output</span>
+            </div>
+            <div className="bg-white border border-slate-300 p-3.5 rounded text-slate-800 text-xs">
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={companyForm.logoUrl || '/assets/maayya-future-foods-logo.png'}
+                    alt="Company logo preview"
+                    className="h-12 w-auto max-w-[65px] object-contain shrink-0"
+                  />
+                  <div>
+                    <h4 className="font-bold text-base font-serif text-slate-950 uppercase tracking-tight">
+                      {companyForm.name || 'COMPANY NAME'}
+                    </h4>
+                    <p className="text-slate-700 text-[11px] font-medium">
+                      {companyForm.city}, {companyForm.state || 'Tamil Nadu'} {companyForm.pincode && `· PIN: ${companyForm.pincode}`} · Phone: {companyForm.phone}
+                    </p>
+                    {companyForm.address && (
+                      <p className="text-slate-500 text-[10px] mt-0.5">{companyForm.address}</p>
+                    )}
+                    <div className="flex gap-3 text-[10px] font-mono text-slate-500 mt-1">
+                      {companyForm.gstin && <span>GSTIN: <strong>{companyForm.gstin}</strong></span>}
+                      {companyForm.fssai && <span>FSSAI: {companyForm.fssai}</span>}
+                      <span>FY: {companyForm.financialYear || '2026-2027'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 border border-slate-900 text-[10px] font-bold uppercase bg-slate-50">
+                    TAX INVOICE
+                  </span>
+                  <p className="font-mono text-[11px] font-bold mt-1 text-slate-800">
+                    {companyForm.invoicePrefix || 'INV-2026-'}001
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Note: Updating company details immediately reflects on newly viewed and printed invoices without modifying historical transaction amounts.
+            </p>
           </div>
 
           <div className="pt-3 border-t border-slate-200">
